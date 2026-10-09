@@ -36,8 +36,10 @@ How to read a row:
 - **The bar** shows progress the way RetroAchievements does: **gold** for hardcore unlocks and
   **grey** for casual unlocks, side by side. A hardcore unlock counts as unlocked in both modes,
   so 30% gold plus 35% grey means 65% of the set.
-- **The dot** marks an award: **gold** for mastered or completed, **silver** for beaten. Filled
-  means hardcore, a hollow ring means casual. The percentage takes the same colour.
+- **The circle** at the bar's right end marks an award: a filled **gold** circle with a bright
+  rim and glow for mastered, a hollow **amber** ring for completed in casual, a filled **grey**
+  circle for beaten in hardcore, or a hollow **grey** ring for beaten in casual. The percentage
+  takes the award's colour.
 
 Press **Select** to switch between the bars and a details view (console, award or last activity).
 Cheevos remembers your choice.
@@ -51,7 +53,7 @@ recognised on your SD card (see [Limitations](Limitations.md)).
 ## A game's achievements
 Every achievement with its badge, points, type and unlock date, or how rare it is if you haven't
 unlocked it yet. "screenshot" means there's an unlock screenshot for it. The top bar shows how
-many you've unlocked, with the game's award dot if it has one.
+many you've unlocked, with a smaller version of the game's award circle if it has one.
 
 ![Achievements](images/game.png)
 

@@ -54,12 +54,16 @@ Settings.
   the choice is saved as `game_list_details` in `settings.json`, and the bottom bar hints it):
   - **Progress** (default): a bar in place of the description line, drawn like RA's web client
     (`PlayerGameProgressBar`): hardcore unlocks gold, casual-only unlocks grey, side by side
-    (30% hardcore + 35% casual-only = 65%). Then RA's award dot (gold for Mastered/Completed,
-    silver for Beaten; filled for hardcore, hollow for casual) and the percentage in the
+    (30% hardcore + 35% casual-only = 65%). An award circle overlays the bar with its centre
+    at the right endpoint: Mastered is filled gold with a bright rim and soft glow; Completed
+    is a quiet hollow amber ring; Beaten is filled grey in hardcore or hollow grey in casual.
+    Hollow centres cover the bar in the row's background colour. The percentage takes the
     award's colour (never 100% before the end, never 0% after an unlock). All bars in a list
-    share one length. Light rows get RA's light-mode darker gold. Where a theme's background
-    fights these colours (a yellow theme), the bar falls back to the theme's text colour in
-    three strengths, and the dots keep filled vs hollow.
+    share one length, including rows without awards. Circle diameter and bar height follow
+    the theme's description line height. Light rows get RA's light-mode darker gold. Where a
+    theme's background fights these colours (a yellow theme), the bar falls back to the
+    theme's text colour in three strengths, and circles use contrasting black or white while
+    keeping filled vs hollow.
   - **Details**: console, plus the award or the last activity ("7 h ago").
 - **Filters** (Y menu): All · On this device · In progress · Mastered or beaten · Not started.
 - **Sort** (Y menu): Recent activity (default, by `MostRecentAwardedDate`) · Title · Console ·
@@ -74,7 +78,8 @@ Settings.
 
 ## A game's achievements
 - **Top bar**: the title and `unlocked/total`. Only the title is shortened, so the count always
-  shows. A game with an award gets RA's award dot between them, as in the games list; without
+  shows. A game with an award gets the same bundled award circle as the Games list, scaled
+  smaller between them (including mastery glow); without
   one, a space separates them (a plain dot there would look like an award).
 - **Row**:
   - badge: colour when unlocked, `_lock` variant when locked;

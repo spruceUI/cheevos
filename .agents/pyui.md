@@ -117,6 +117,15 @@ of PyUI's views, without patching PyUI.
   background, description at `text_offset_y + title height`). An item with `progress` gets an
   empty (not `None`) description, so PyUI keeps the two-line layout. Colours:
   `bar_colors.py`, after RA's website ([retroachievements.md](retroachievements.md)).
+  Every bar has the same length; larger award circles overlay its right endpoint.
+  `award_images.py` selects bundled PNGs from `res/awards/`, baked on the development machine
+  by `scripts/render_awards.py`. The Games list does no circle rasterization or award PNG writes.
+  Dark/light assets follow each row's background; black/white assets handle contrast fallback.
+  Each source circle is 48 px across (50 px canvas, or 116 px including the mastery halo),
+  scaled with the theme's description line height. For hollow rings, an opaque swatch in the
+  row's average background colour covers only the strip of bar inside the ring, ending at
+  the circle centre; the rim hides the strip's left edge. The top bar uses these same PNGs
+  at a smaller size, including mastery glow, with no bar to mask inside hollow rings.
 - **Long text:** PyUI does not truncate list titles against `value_text`, or descriptions at
   the screen edge. The bridge fits both (`ui/pyui/text.py`).
 
@@ -159,7 +168,7 @@ of PyUI's views, without patching PyUI.
   (`generated.swatch`, `ResizeType.ZOOM`). ZOOM crops the source to the target's shape, so the
   swatch must match the strip's orientation (256×16 wide, 16×256 tall), or a thin side rounds
   to 0 px and nothing is drawn. The desktop can't show this; check on a device.
-- **Generated images:** `generated.py` writes PNGs (swatches, award dots, button glyphs) with a
+- **Generated images:** `generated.py` writes PNGs (swatches and button glyphs) with a
   stdlib encoder into the RAM scratch: SDL_image can't always save PNG on devices.
 - **Bottom bar hook:** the sync status wraps `Display.bottom_bar.render_bottom_bar` (an instance
   attribute), not `Display.clear`. Themes with `renderTopAndBottomBarLast` draw the bar in
@@ -172,7 +181,8 @@ of PyUI's views, without patching PyUI.
 - **Top-bar title** (`title_bar.py`): PyUI draws the title centred at `int(width / 2)`. A game's
   `Title` shortens only its name, so the count stays. For the award dot, the bridge passes PyUI
   the whole title with a run of spaces in it, and a hook on `Display.top_bar.render_top_bar`
-  draws the dot in the gap (measured once with SDL_ttf). If the hook draws nothing, the title
+  draws a smaller bundled award PNG in the gap (measured once with SDL_ttf, including room for
+  the halo). Its path and size are kept with the title. If the hook draws nothing, the title
   still reads right. Gotchas:
   - `displayable()` collapses runs of spaces, so the gap is added after fitting the name.
   - Unlike the bottom bar, PyUI redraws the whole top bar on popup frames, over the frozen
