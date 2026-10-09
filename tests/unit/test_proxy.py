@@ -46,6 +46,7 @@ FFTA_PATCH = {
         ],
     },
 }
+DESCENT_ACHIEVEMENT = {"ID": 1002, "Title": "Brief", "Points": 0}
 
 
 @pytest.fixture
@@ -215,6 +216,131 @@ def test_achievements_keyed_by_id(paths):
 
 
 @pytest.mark.parametrize(
+    ("collection", "game_id"),
+    [
+        ({"Achievements": [DESCENT_ACHIEVEMENT]}, 3830),
+        ({"Achievements": {"1002": DESCENT_ACHIEVEMENT}}, 3830),
+        ({"Sets": [{"Achievements": [DESCENT_ACHIEVEMENT]}]}, 3830),
+        ({"Sets": [{"GameId": 4000, "Achievements": {"1002": DESCENT_ACHIEVEMENT}}]}, 4000),
+    ],
+    ids=["direct-list", "direct-dictionary", "nested-list", "subset-dictionary"],
+)
+def test_achievementsets_payload_shapes(paths, collection, game_id):
+    db = make_db(paths)
+    add_cache(db, "achievementsets:hash:balah", {"GameId": 3830, "Title": "Descent", **collection})
+    add_award(db, 1002, 1000)
+    db.close()
+
+    assert ProxyReader(paths).pending_awards(" BALAH ") == [
+        PendingAward(1002, game_id, "Descent", "Brief", 0, 1)
+    ]
+
+
+def test_achievementsets_nested_games_and_missing_fields(paths):
+    db = make_db(paths)
+    add_cache(
+        db,
+        "achievementsets:hash:balah",
+        {
+            "GameId": 3830,
+            "Achievements": None,
+            "Sets": [
+                None,
+                {"Achievements": "bad"},
+                {"Achievements": [None, {"ID": "1002"}, {"ID": 1002, "Points": "bad"}]},
+                {"GameId": 4000, "Achievements": [{"ID": 1003, "Title": "Subset", "Points": 5}]},
+                {"GameId": 4001, "Achievements": [{"ID": 1002, "Title": "Duplicate"}]},
+            ],
+        },
+    )
+    add_award(db, 1002, 0)
+    add_award(db, 1003, 1000)
+    db.close()
+
+    assert ProxyReader(paths).pending_awards("balah") == [
+        PendingAward(1002, 3830, "Game 3830", "Achievement 1002", None, None),
+        PendingAward(1003, 4000, "Game 4000", "Subset", 5, 1),
+    ]
+
+
+@pytest.mark.parametrize("direct", [[DESCENT_ACHIEVEMENT], {"1002": DESCENT_ACHIEVEMENT}, []])
+def test_direct_achievementsets_takes_priority_over_nested_sets(paths, direct):
+    db = make_db(paths)
+    add_cache(
+        db,
+        "achievementsets:hash:balah",
+        {"GameId": 3830, "Achievements": direct, "Sets": [{"Achievements": [{"ID": 1003}]}]},
+    )
+    add_award(db, 1002, 0)
+    add_award(db, 1003, 1000)
+    db.close()
+
+    awards = ProxyReader(paths).pending_awards("balah")
+    assert [a.game_id for a in awards] == [3830 if direct else None, None]
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "{not json",
+        None,
+        [],
+        {},
+        *(
+            {"GameId": value, "Achievements": [DESCENT_ACHIEVEMENT]}
+            for value in (0, -1, "3830", True, 3.5)
+        ),
+        {"GameId": 3830, "Achievements": "bad", "Sets": "bad"},
+        {"GameId": 3830, "Sets": [None, {"Achievements": 5}]},
+        *(
+            {"GameId": 3830, "Sets": [{"GameId": value, "Achievements": [DESCENT_ACHIEVEMENT]}]}
+            for value in (None, 0, -1, "4000", True)
+        ),
+    ],
+)
+def test_malformed_achievementsets_does_not_hide_queue_or_prevent_fallback(paths, body):
+    db = make_db(paths)
+    add_cache(db, "achievementsets:hash:balah", body)
+    add_cache(
+        db, "achievementsets:hash:another", {"GameId": 3830, "Achievements": [DESCENT_ACHIEVEMENT]}
+    )
+    add_award(db, 1002, 1000)
+    add_award(db, 1003, 2000)
+    db.close()
+
+    assert ProxyReader(paths).pending_awards("balah") == [
+        PendingAward(1002, 3830, "Game 3830", "Brief", 0, 1),
+        PendingAward(1003, None, "", "", None, 2),
+    ]
+
+
+def test_patch_then_achievementsets_account_precedence(paths):
+    db = make_db(paths)
+    for key, ids, title in (
+        ("achievementsets:hash:another", (1, 2, 3, 4), "Other sets"),
+        ("achievementsets:hash:balah", (1, 2, 3), "Own sets"),
+        ("patch:7:another", (1, 2), "Other patch"),
+        ("patch:7:balah", (1,), "Own patch"),
+    ):
+        data = {"Title": title, "Achievements": [{"ID": aid, "Title": title} for aid in ids]}
+        body = {"PatchData": data} if key.startswith("patch:") else {"GameId": 7, **data}
+        add_cache(db, key, body)
+    for aid in range(1, 6):
+        add_award(db, aid, aid * 1000)
+    db.close()
+
+    awards = ProxyReader(paths).pending_awards("balah")
+    assert [a.achievement_title for a in awards] == [
+        "Own patch",
+        "Other patch",
+        "Own sets",
+        "Other sets",
+        "",
+    ]
+    assert [a.game_id for a in awards] == [7, 7, 7, 7, None]
+
+
+@pytest.mark.parametrize(
     ("key", "body"),
     [
         ("patch:7:balah", {"PatchData": [1]}),
@@ -276,12 +402,19 @@ def test_open_failure_never_raises(paths, monkeypatch, caplog):
 
 def test_reader_does_not_write(paths):
     db = make_db(paths)
-    add_award(db, 1, 1000)
+    add_cache(
+        db, "achievementsets:hash:balah", {"GameId": 3830, "Achievements": [DESCENT_ACHIEVEMENT]}
+    )
+    add_award(db, 1002, 1000)
     db.close()
     database = paths.proxy_data_dir / "proxy.sqlite3"
     before = database.stat().st_mtime_ns
-    ProxyReader(paths).pending_awards("Balah")
+    contents = database.read_bytes()
+    assert ProxyReader(paths).pending_awards("Balah") == [
+        PendingAward(1002, 3830, "Game 3830", "Brief", 0, 1)
+    ]
     assert database.stat().st_mtime_ns == before
+    assert database.read_bytes() == contents
     assert sorted(p.name for p in paths.proxy_data_dir.iterdir()) == ["proxy.sqlite3"]
 
 
