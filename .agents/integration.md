@@ -70,24 +70,30 @@ unlocks show in the UI: [product.md](product.md).
 - **Files** (under `App/RAOfflineProxy/data/`, only if they exist):
   - `proxy.sqlite3`, opened read-only with `sqlite3.connect("file:…?mode=ro", uri=True)`, which
     can't create anything. Query `pending_awards WHERE status='pending'` and `api_cache` keys
-    `patch:<gameId>:<user>` for titles and points, mirroring the proxy's
-    `list_pending_awards`.
+    `patch:<gameId>:<user>` and `achievementsets:<hash>:<user>` for titles and points,
+    mirroring the proxy's `list_pending_awards`.
   - `online_state.json` (`{"online": bool}`).
   - `cached_game_ids.txt` (one ID per line).
-- **Bounded metadata reads**: pass only queued achievement IDs to the patch lookup. Stream
+- **Bounded metadata reads**: pass only queued achievement IDs to the metadata lookup. Stream
   the current account's responses first (using the stripped, lowercase username), then other
   accounts only for unresolved IDs. Keep metadata only for those IDs and stop once all are
   resolved. Iterate list or dictionary achievements without copying the collection. Memory is
   bounded by the queue and one parsed response, rather than the whole proxy cache; an unknown
-  ID can still require scanning every patch. Match account suffixes literally with bound SQL
-  parameters. Use the existing `cacheKey`/`responseBody` columns and indexed `GLOB 'patch:*'`
-  prefix lookup, with no new schema, JSON SQL extension or writes. Additional cache formats
-  must follow the same queued-ID bound and fill gaps only after both patch-account passes.
+  ID can still require scanning every cached response. Match account suffixes literally with
+  bound SQL parameters. Use the existing `cacheKey`/`responseBody` columns and indexed `GLOB`
+  prefix lookup, with no new schema, JSON SQL extension or writes. Only after both patch-account
+  passes, fill gaps from `achievementsets:` responses, current account first then other accounts.
+  Accept direct `Achievements` lists or dictionaries, or otherwise nested `Sets[].Achievements`
+  in either shape. A direct collection (even empty) takes priority over `Sets`. Require a positive
+  integer root `GameId`; nested sets inherit it unless they provide their own positive integer
+  `GameId` for a subset. Ignore malformed bodies, sets and achievements without hiding valid
+  queue rows. Use the response's `Title`, with the usual game-ID and achievement-ID fallbacks.
 - **An unlock's game** comes from our synced achievement lists first (`AppContext.pending_awards`),
-  then from the proxy's `patch:` entries. Spruce's RetroArch (1.22.2) only requests
+  then from the proxy's `patch:` or `achievementsets:` entries. Spruce's RetroArch (1.22.2) only requests
   `r=achievementsets`, so the proxy caches `achievementsets:<hash>:<user>` while you play
   online. It writes `patch:` entries only when you cache a game from its own menu. Without a
-  game, a queued unlock is missing from Recent unlocks and the games list's "+N".
+  game, a queued unlock is missing from the games list's "+N". Resolving metadata alone does not
+  add an entirely uncached achievement to Recent unlocks; that screen still needs synced details.
 - Guarded by a schema check. Any `sqlite3.Error` on the read-only open (locked, or a WAL without
   its `-shm` file while the service starts) or anything unexpected means "proxy unavailable":
   the features hide and the next screen tries again. Never crash: the screens don't catch
