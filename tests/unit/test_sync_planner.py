@@ -6,7 +6,6 @@ from cheevos.core.sync.planner import (
     badge_game_ids,
     merge_library,
     plan_detail_fetches,
-    unlock_candidates,
     working_set,
 )
 
@@ -136,14 +135,3 @@ def test_working_set_is_on_device_or_recently_active():
     ]
     since = NOW - 30 * DAY
     assert working_set(games, on_device={3}, recent_since=since) == {1, 2, 3}
-
-
-def test_unlock_candidates_are_uncached_games_with_unlocks_newest_first():
-    games = [
-        game(1, earned=1, last_unlock=100),
-        game(2, earned=1, last_unlock=300),
-        game(3, earned=1, last_unlock=200),  # cached
-        game(4, earned=0, last_played=400),  # no unlocks
-        game(5, earned=1, total=0, last_unlock=500),  # no achievements
-    ]
-    assert [g.game_id for g in unlock_candidates(games, cached={3})] == [2, 1]

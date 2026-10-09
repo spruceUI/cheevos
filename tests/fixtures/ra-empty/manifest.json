@@ -3,5 +3,6 @@
   {"file": "user_summary.json", "method": "API_GetUserSummary", "params": {"g": 5, "a": 10}},
   {"file": "completion_progress.json", "method": "API_GetUserCompletionProgress", "params": {"c": 500, "o": 0}},
   {"file": "user_awards.json", "method": "API_GetUserAwards", "params": {}},
-  {"file": "recently_played.json", "method": "API_GetUserRecentlyPlayedGames", "params": {"c": 50}}
+  {"file": "recently_played.json", "method": "API_GetUserRecentlyPlayedGames", "params": {"c": 50}},
+  {"file": "unlocks.json", "method": "API_GetAchievementsEarnedBetween", "params": {"f": 0, "t": 2000000000}}
 ]}

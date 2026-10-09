@@ -40,7 +40,7 @@ Settings.
   **Awards**: mastered and beaten counts.
 - **Sync status** lives in PyUI's bottom bar, not in a home row:
   - Home and Settings always show it with a Start hint: "✓ Synced 5 min ago · [START] Sync",
-    "Syncing 3/12 · Final Fantasy Tactics Advance · [START] Cancel", "Offline · showing saved
+    "Games 3/12 · [START] Cancel", "Offline · showing saved
     data · [START] Retry".
   - Every other screen shows only progress while a sync runs, and the result for 5 s after it
     ends, with no hint. That keeps the bar clean on themes whose own A/B hints leave little room.
@@ -96,14 +96,18 @@ Settings.
   RAOfflineProxy's queue counts as unlocked.
 - **Unlock info**: "Hardcore · 2026-09-30 21:14", or "Casual · …", or "Pending sync · queued
   …", or "Locked".
-- **Rarity**: `NumAwarded / NumDistinctPlayers` as a percentage, for both modes.
+- **Rarity**: `NumAwarded / NumDistinctPlayers` as a percentage, for both modes. A card
+  opened from the independent Recent feed can lack game statistics: show unknown rarity,
+  draw its saved content immediately, and load the statistics in the background online.
 - **Screenshot**: a preview if one exists; A opens it full screen ("[A] Full screen" in the
   bottom bar): no bars, black around it, as large as the screen allows and still sharp (enlarged
   by the next whole factor with nearest-neighbour, then shrunk to fit).
 
 ## Recent unlocks
-A feed of the latest 100 unlocks across games, newest first, built from the local DB with no
-extra API calls. Pending proxy unlocks come first, marked. A row opens the achievement card.
+A feed of the latest 100 distinct unlocks across games, newest first, fetched during sync
+and cached separately from complete game sets. Browsing it uses saved definitions and game
+titles, even for games whose full sets were never downloaded. Pending proxy unlocks come
+first, marked; already-online entries are not duplicated. A row opens the achievement card.
 
 ## Awards wall
 - A grid of game icons from `API_GetUserAwards` (`VisibleUserAwards` of type

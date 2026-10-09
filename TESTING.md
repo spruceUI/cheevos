@@ -135,7 +135,7 @@ fits list icons into each theme's layout; all themes use the same gold and muted
 
 ## Recorded data
 - `uv run python scripts/record_fixtures.py <username> [--out tests/fixtures/ra]` records an
-  account's API responses (profile, games, awards, every game's achievements) as fixtures. The
+  account's API responses (profile, games, awards, recent unlocks, every game's achievements) as fixtures. The
   key comes from `CHEEVOS_API_KEY` or `dev/sdcard/Saves/cheevos/apikey.txt` and is never written
   to the files. Requests are spaced out to be polite to RetroAchievements.
 - `uv run python scripts/make_synthetic_cache.py OUT_DB USERNAME --games 1000` builds a big

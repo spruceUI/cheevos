@@ -5,11 +5,12 @@ Cheevos keeps a copy of your RetroAchievements data on the SD card and shows tha
 updates it:
 1. Your profile (points, rank, last played game).
 2. Your list of games with their progress.
-3. The achievements of the games on your SD card and the games you played recently (see
+3. Your awards and latest 100 unlocks. Recent unlocks are saved separately, so they don't
+   require downloading entire achievement lists for old games.
+4. The achievements of the games on your SD card and the games you played recently (see
    **Recent games** in [Settings](Settings.md)), plus any game that changed since you last
    downloaded it. Games not refreshed for 30 days are checked a few at a time, so changes
    RetroAchievements makes to old sets also arrive.
-4. Your awards.
 5. Badges and game icons (see **Badge downloads** in [Settings](Settings.md)).
 
 **The first sync** spaces game downloads about 3 seconds apart: seconds for small libraries,
@@ -18,6 +19,10 @@ Image downloads are spaced a quarter of a second apart and can take longer for l
 Your games list, profile and awards are complete either way. You can browse while syncing. If a
 sync is interrupted (you leave the app, the device sleeps, the battery runs out), the next one
 carries on where it stopped.
+
+The bottom bar shows the current stage. During game downloads it shows, for example,
+**Games 3/12**, with a fixed total for that stage. While finding recent unlocks, it shows how
+many it has found; the number of history requests needed isn't known ahead of time.
 
 **Other games** are downloaded when you open them: "Loading achievements…" for a second or two,
 then they stay on the card. To have every game's achievements on the card, for example before a
@@ -29,8 +34,9 @@ and can be stopped from the same place.
 press **Start**. Press Start again to cancel.
 
 ## Offline
-Everything you've synced is available without Wi-Fi: games, achievements, badges, screenshots,
-profile and awards. The bottom bar says "Offline · showing saved data", and **Start** retries.
+Everything you've synced is available without Wi-Fi: games, achievements, recent unlocks,
+badges, screenshots, profile and awards. The bottom bar says "Offline · showing saved data",
+and **Start** retries.
 
 Three things need a connection when you ask for them:
 - The achievements of a game you never opened, haven't played lately and that isn't on your
@@ -44,6 +50,8 @@ Cheevos normally uses verified HTTPS. If the device's clock is unset or incorrec
 for another reason, it automatically retries over HTTP. **Sync Time via Network** in Spruce
 isn't required. Cheevos uses RetroAchievements' response time for its own recent activity and
 sync calculations, without changing the device's clock.
+Recent unlock queries use the account's member date and latest unlock date from
+RetroAchievements, so they also work when the device still shows 1970.
 
 The HTTP fallback sends your Web API key and account data unencrypted. See [Setup](Setup.md).
 

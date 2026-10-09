@@ -34,7 +34,7 @@ the app deletes it and starts fresh.
 
 ```sql
 meta(key TEXT PRIMARY KEY, value TEXT)  -- username, last sync, unfinished full download,
-                                        -- RA's pause, unlock window, first hardcore unlock
+                                        -- RA's pause, unlock window, first hardcore unlock, recent unlock feed
 profile(username TEXT PRIMARY KEY, json TEXT, synced_at INTEGER)
 games(game_id INTEGER PRIMARY KEY, title, console_id, console_name, image_icon,
       max_possible, num_awarded, num_awarded_hc, most_recent_awarded_at, highest_award_kind,
@@ -46,6 +46,13 @@ game_stats(game_id PRIMARY KEY, num_distinct_players, num_players_casual, num_pl
 awards(game_id, kind, title, console_id, console_name, image_icon, awarded_at, display_order,
        PRIMARY KEY(game_id, kind))
 ```
+
+The recent-unlock feed is a versioned JSON snapshot in `meta.recent_unlock_feed`, bounded to
+100 entries with their achievement definitions and game metadata. It is replaced in one
+transaction only after complete history coverage; failure or cancellation preserves the old
+feed. Feed rows never mark a full game set as downloaded. No SQL schema bump is needed, so
+existing game and image caches survive this update. Before the first snapshot, Recent unlocks
+falls back to the old cached achievement sets for offline compatibility.
 
 The profile's recent-points window (`API_GetAchievementsEarnedBetween`) is stored too, for
 offline use. If the configured username differs from `meta.username`, the cache is for another
@@ -86,7 +93,16 @@ It runs on a background worker thread. The UI reads committed DB state and a thr
    HighestAwardKind)`.
 4. **Awards**: `GetUserAwards`. One request, before the details, so the awards wall and the
    home screen are complete as early as the games list.
-5. **Plan detail fetches.** A game's details take one request, spaced 3 s apart at the steady
+5. **Recent unlocks**: `GetAchievementsEarnedBetween`, latest 100 distinct achievements. Query
+   backwards from the latest `MostRecentAwardedDate` to the account's member date: neither
+   bound depends on the device clock. Start with 7 days, halve any capped (500-row) window
+   before accepting it, and expand uncapped windows while fewer than 100 entries are found.
+   Windows are inclusive and disjoint. Small accounts whose history fits below the cap use
+   one whole-history request. Keep the newest event per achievement; hardcore wins a
+   same-second duplicate. A capped single second or exhausted request budget fails without
+   publishing a partial snapshot. Reuse a snapshot while the unlock-bearing library
+   fingerprints match, for up to 30 days. Ordinary play activity alone does not refresh it.
+6. **Plan detail fetches.** A game's details take one request, spaced 3 s apart at the steady
    pace, so a sync doesn't fetch every game: 2,937 games would take about 2.5 hours. It keeps a
    **working set**: games on this device (`local_games`) and games played or unlocked within the "Recent
    games" window (30 days by default). Other games are fetched when opened (the game worker,
@@ -97,19 +113,16 @@ It runs on a background worker thread. The UI reads committed DB state and a thr
      oldest first, so revised sets slowly converge;
    - every game, while "Download every game" is unfinished (`meta.full_resync_since`). It
      resumes in every later sync until a sync finishes, unless the user stops it in Settings.
-6. **Fetch details**: `GetGameInfoAndUserProgress` per planned game, committed **one game at a
+7. **Fetch details**: `GetGameInfoAndUserProgress` per planned game, committed **one game at a
    time**. An interrupted sync (power-off, sleep, app exit) resumes from the remaining plan on the
    next run.
-   - Then **Recent unlocks coverage**: uncached games, newest last unlock first, until the
-     newest 100 cached unlocks (`RECENT_UNLOCK_COUNT`, what Recent unlocks shows) are newer than
-     the next game's last unlock. Usually nothing: recent games are in the working set. A
-     player with no activity lately gets their last few games.
    - The test account (2,937 games) has 60 games in a 30-day working set: about 3 minutes
      for its details at the current pace, plus media downloads spaced 0.25 s apart.
-7. **Badges** (the "Badge downloads" setting):
+8. **Badges** (the "Badge downloads" setting):
    - On-device + recent: games in `local_games` plus games played or unlocked within the recent
      window.
    - All: every game whose details are cached.
+   - Both scopes also include colour badges for the recent feed, independently of game sets.
    - None: nothing is downloaded during sync.
    - Only the variant matching the current state is fetched: colour if unlocked, `_lock` if
      locked. This halves the file count. A newly unlocked achievement gets its colour badge on the
@@ -117,14 +130,16 @@ It runs on a background worker thread. The UI reads committed DB state and a thr
      (`lazy_media.py`).
    - The `_lock` blob stays after an unlock, on purpose: it's a few KB, it's needed again if
      progress is reset on RA, and "Clear image cache" removes it.
-8. **Local matching refresh** ([integration.md](integration.md), "On-device games").
+9. **Local matching refresh** ([integration.md](integration.md), "On-device games").
 
 - **Triggers**: auto on app open when the network is up and the setting is on; Start on any
   screen; Settings → "Sync now" / "Download every game".
 - **Cancellation**: sync stops at the next safe point when Start is pressed again or the app
   exits. A wait for the next request slot or a retry ends at once (the client raises
   `RequestCancelledError`).
-- **Progress**: phase, `done/total`, current game title, and an ETA from a moving average.
+- **Progress**: fixed planned game totals, shown compactly as `Games 3/12` (the active
+  game's ordinal). History coverage has no known request total: show the phase and entries
+  found. The UI displays no ETA; the tracker's existing estimates remain internal.
 
 `python -m cheevos.core.sync` runs a sync without the UI ([TESTING.md](../TESTING.md)).
 
@@ -143,7 +158,9 @@ It runs on a background worker thread. The UI reads committed DB state and a thr
   pause, stores a long pause for the sync to respect, and reopens its client after a key
   rejection. The game screen shows "Loading achievements…" and polls it every input tick; B
   backs out and the fetch still completes. A game it fetched after the sync planned the same
-  game isn't fetched again by the sync.
+  game isn't fetched again by the sync. A Recent unlock card already has its definition:
+  it draws immediately, requests missing game statistics on this worker and enriches itself
+  on input ticks. Rarity stays unknown offline until the game details are cached.
 - **SQLite**: one connection per thread. Writes happen on the sync thread and the game worker,
   one short transaction per game (the 5 s busy timeout covers the other's writes), plus small
   `meta` writes from the UI (the unlock window, stopping "Download every game"). The UI never

@@ -26,6 +26,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from cheevos.core.clock import ServerClock
+from cheevos.core.ra_client.parse import parse_time
 from cheevos.core.ra_client.transport import (
     MEDIA_HOST,
     FixtureTransport,
@@ -34,6 +35,7 @@ from cheevos.core.ra_client.transport import (
     Transport,
 )
 from cheevos.platform.desktop.clock_drill import ClockRecoveryTransport
+from cheevos.platform.desktop.showcase_history import unlocks as showcase_unlocks
 from cheevos.platform.paths import Paths
 
 SCENARIOS = (
@@ -75,7 +77,6 @@ _SHOWCASE_PLAYER = {
 # Unlocks the showcase invents to match its progress are dated before every recorded one, so
 # Recent unlocks still starts with the real unlocks (and their screenshots).
 _INVENTED_BEFORE = calendar.timegm((2020, 1, 1, 12, 0, 0))
-_MONTH = 31 * 86_400  # the invented unlocks span the last month
 # Showcase unlocks for the last 30 days: (days ago, points, hardcore?)
 _SHOWCASE_UNLOCKS = (
     (0, 10, True),
@@ -172,7 +173,15 @@ class _Showcase:
             query = parse_qs(urlsplit(path).query)
             end = int(query.get("t", ["0"])[0]) or int(time.time())
             start = int(query.get("f", ["0"])[0])
-            return Response(status=200, body=json.dumps(_unlocks(start, end)).encode())
+            latest = max(
+                (parse_time(g["MostRecentAwardedDate"]) or 0 for g in self._games), default=0
+            )
+            if end <= latest:  # the feed uses RA's last unlock, See more uses app time
+                return self._base.get(host, path, headers)
+            rows = showcase_unlocks(
+                start, end, str(_SHOWCASE_PLAYER["MemberSince"]), _SHOWCASE_UNLOCKS
+            )
+            return Response(status=200, body=json.dumps(rows).encode())
         response = self._base.get(host, path, headers)
         if response.status != 200:  # noqa: PLR2004 — HTTP OK
             return response
@@ -308,53 +317,6 @@ def _ra_time(seconds: int) -> str:
         E.g. ``"2026-08-21 17:02:50"``.
     """
     return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(seconds))
-
-
-def _unlocks(start: int, end: int) -> list[dict]:
-    """Invent the showcase player's unlocks in a window (``API_GetAchievementsEarnedBetween``).
-
-    A month of unlocks ending at ``end``; a window reaching further back (the profile looking
-    for the first unlock) also gets one shortly after the player registered.
-
-    Args:
-        start: Window start (epoch seconds).
-        end: Window end (epoch seconds).
-
-    Returns:
-        Rows, oldest first.
-    """
-    rows = _recent_unlocks(end)
-    since = time.strptime(str(_SHOWCASE_PLAYER["MemberSince"]), "%Y-%m-%d %H:%M:%S")
-    first = calendar.timegm(since) + 86_400
-    if start <= first < end - _MONTH:
-        row = {**rows[0], "Date": _ra_time(first), "HardcoreMode": 1, "AchievementID": 899_999}
-        rows.insert(0, row)
-    return rows
-
-
-def _recent_unlocks(end: int) -> list[dict]:
-    """Invent a month of unlocks ending at ``end`` (``API_GetAchievementsEarnedBetween`` rows).
-
-    Args:
-        end: Window end (epoch seconds).
-
-    Returns:
-        Rows, oldest first.
-    """
-    rows = []
-    for index, (days_ago, points, hardcore) in enumerate(_SHOWCASE_UNLOCKS):
-        when = time.gmtime(end - days_ago * 86_400 - 3_600)
-        rows.append(
-            {
-                "Date": time.strftime("%Y-%m-%d %H:%M:%S", when),
-                "HardcoreMode": int(hardcore),
-                "AchievementID": 900_000 + index,
-                "Points": points,
-                "GameID": 519,
-                "ConsoleName": "Game Boy Advance",
-            }
-        )
-    return sorted(rows, key=lambda row: row["Date"])
 
 
 class _BorrowedAwards:

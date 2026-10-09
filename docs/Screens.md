@@ -73,8 +73,11 @@ With **Hide locked descriptions** on (see [Settings](Settings.md)), a locked ach
 "Description hidden" instead; press **X** to reveal it.
 
 ## Recent unlocks
-Your latest unlocks across all games, newest first. Unlocks still waiting in RAOfflineProxy come
-first, marked "Pending sync". Press **A** to open one.
+Your latest 100 unlocks across all games, newest first, saved during sync even when a game's
+full achievement list hasn't been downloaded. Unlocks still waiting in RAOfflineProxy come
+first, marked "Pending sync". Press **A** to open one. The card's title, description and unlock
+date work offline; missing player statistics load in the background when you're online.
+Until those statistics are available, rarity shows **—**.
 
 ![Recent unlocks](images/recent.png)
 

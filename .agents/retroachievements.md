@@ -17,7 +17,7 @@ look and counting rules come from the website's own source (RAWeb). The client l
   | `API_GetGameInfoAndUserProgress` (`g=&a=1`) | Achievement definitions, unlock dates, game stats |
   | `API_GetUserAwards` | Awards wall |
   | `API_GetUserRecentlyPlayedGames` (`c=50`) | The "recent" set for the badge scope |
-  | `API_GetAchievementsEarnedBetween` (`f=&t=`) | Points in the last 7/30 days, and once the first hardcore unlock (from "member since"); only on demand (profile "See more" and 30-day chart), 500 rows per page |
+  | `API_GetAchievementsEarnedBetween` (`f=&t=`) | Latest 100 unlocks during sync; points in the last 7/30 days and the first hardcore unlock on demand (profile "See more" and 30-day chart); capped at 500 rows |
 
 - **Media**: `https://media.retroachievements.org/Badge/<BadgeName>.png` and `_lock.png`,
   `https://media.retroachievements.org<ImageIcon>`, and
@@ -79,7 +79,12 @@ look and counting rules come from the website's own source (RAWeb). The client l
   is always an empty stub and `Status` always "Offline"; `RichPresenceMsgDate` is the closest
   thing to a last-activity time. `Rank` is null below 250 hardcore points.
 - **`API_GetAchievementsEarnedBetween`** returns at most 500 rows, oldest first: page on from
-  the last row's `Date` (`RaClient.unlocks_between`).
+  the last row's `Date` (`RaClient.unlocks_between`) for profile statistics. For Recent unlocks,
+  search backwards in disjoint date windows and narrow every capped response before using
+  it (`ra_client/recent.py`): reversing a capped response would miss the newest unlocks.
+  Bounds come from RA's member/latest-unlock dates, not system time. The feed keeps one
+  row per achievement at its newest returned event date and mode; it does not fabricate
+  rarity from the endpoint's missing player statistics.
 - **Awards:** `VisibleUserAwards` leaves out awards the player hid on the site, but the counts
   include them. `DisplayOrder` is the player's own arrangement. A mastered game usually holds a
   Beaten award too.

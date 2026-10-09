@@ -9,8 +9,9 @@ The API key is read from ``$CHEEVOS_API_KEY`` or ``dev/sdcard/Saves/cheevos/apik
 sent only in the request and never written: saved files contain response bodies only, and the
 manifest lists requests without the ``y`` parameter.
 
-Records the profile, summary, completion progress, awards and recently played games, plus game
-details for every game found. Requests are serial and spaced out to be polite to RA.
+Records the profile, summary, completion progress, awards, recently played games and recent
+unlocks, plus game details for every game found. Requests are serial and spaced out to be
+polite to RA.
 ``--awards-only`` records just the awards (one request), for the ``awards`` desktop drill: a
 big account's awards wall without syncing its whole library.
 """
@@ -27,6 +28,12 @@ import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
+
+from cheevos.core.models import GameProgress, UserProfile
+from cheevos.core.ra_client import parse
+from cheevos.core.ra_client.client import UNLOCK_PAGE
+from cheevos.core.ra_client.recent import INITIAL_WINDOW, UnlockPage, fetch_recent_unlocks
+from cheevos.core.sync.planner import merge_library
 
 REPO = Path(__file__).resolve().parents[1]
 KEY_FILE = REPO / "dev" / "sdcard" / "Saves" / "cheevos" / "apikey.txt"
@@ -108,14 +115,41 @@ def record(recorder: Recorder) -> None:
         recorder: Configured recorder.
     """
     recorder.fetch("API_GetUserProfile", "user_profile")
-    recorder.fetch("API_GetUserSummary", "user_summary", g=5, a=10)
+    summary = recorder.fetch("API_GetUserSummary", "user_summary", g=5, a=10)
     progress = recorder.fetch("API_GetUserCompletionProgress", "completion_progress", c=500, o=0)
     recorder.fetch("API_GetUserAwards", "user_awards")
     recent = recorder.fetch("API_GetUserRecentlyPlayedGames", "recently_played", c=50)
+    games = merge_library(
+        parse.parse_completion_progress(progress)[0], parse.parse_recently_played(recent)
+    )
+    record_recent(recorder, parse.parse_user_summary(summary), games)
     game_ids = {int(game["GameID"]) for game in progress["Results"]}
     game_ids |= {int(game["GameID"]) for game in recent}
     for game_id in sorted(game_ids):
         recorder.fetch("API_GetGameInfoAndUserProgress", f"game_{game_id}", g=game_id, a=1)
+
+
+def record_recent(recorder: Recorder, profile: UserProfile, games: list[GameProgress]) -> None:
+    """Record the same bounded history requests as sync, including capped-window retries."""
+    start = max(profile.member_since or 0, 0)
+    end = max((game.last_unlock_at or 0 for game in games), default=0)
+    if not end:
+        return
+    pages = 0
+
+    def page(first: int, last: int) -> UnlockPage:
+        """Save one raw response so FixtureTransport can replay the exact query."""
+        nonlocal pages
+        data = recorder.fetch(
+            "API_GetAchievementsEarnedBetween", f"unlocks_{pages}", f=first, t=last
+        )
+        pages += 1
+        return parse.parse_recent_unlocks(data), len(data) >= UNLOCK_PAGE
+
+    width = (
+        end - start + 1 if sum(game.earned for game in games) * 2 < UNLOCK_PAGE else INITIAL_WINDOW
+    )
+    fetch_recent_unlocks(page, start=start, end=end, initial_window=width)
 
 
 def main(argv: list[str] | None = None) -> int:

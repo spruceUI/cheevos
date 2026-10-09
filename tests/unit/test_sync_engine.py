@@ -7,13 +7,13 @@ from pathlib import Path
 import pytest
 
 from cheevos.core.clock import ServerClock
-from cheevos.core.errors import AuthError, CheevosError
+from cheevos.core.errors import AuthError, CheevosError, NetworkError
 from cheevos.core.ra_client.client import RaClient
 from cheevos.core.ra_client.transport import FixtureTransport, Response
 from cheevos.core.settings import BadgeScope
 from cheevos.core.storage.data_cache import DataCache
 from cheevos.core.storage.media_cache import MediaCache, avatar_key, badge_key, icon_key
-from cheevos.core.sync.background import BackgroundSync
+from cheevos.core.storage.recent_feed import RecentFeed, RecentFeedCache
 from cheevos.core.sync.engine import (
     FULL_SINCE_KEY,
     LAST_SYNC_KEY,
@@ -27,10 +27,9 @@ from cheevos.core.sync.progress import Failure, Phase, ProgressTracker
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "ra"
 NOW = 1_791_158_400  # 2026-10-05 00:00 UTC
 FFTA = 519
-# A first sync with the defaults (30 days, FFTA on device): Fire Emblem (played yesterday) and
-# FFTA, then every game with unlocks (the account has fewer than 100, so all are "newest").
-FIRST_SYNC_GAMES = {554, FFTA, 3830, 788, 355, 4239, 1446, 1454}
-UNTOUCHED_OLD_GAMES = {4958, 1836, 2, 1487}  # no unlocks, not played lately, not on device
+# Fire Emblem (played yesterday) and FFTA (on device); feed coverage fetches no full sets.
+FIRST_SYNC_GAMES = {554, FFTA}
+UNTOUCHED_OLD_GAMES = {3830, 788, 355, 4239, 1446, 1454, 4958, 1836, 2, 1487}
 
 
 def recorded_game_ids():
@@ -145,19 +144,19 @@ def test_cancel_mid_details_then_resume_fetches_only_the_rest(harness):
 
     def cancelling_game_detail(game_id):
         calls["details"] += 1
-        if calls["details"] == 3:
+        if calls["details"] == 1:
             harness.cancel.set()
         return original(game_id)
 
     harness.client.game_detail = cancelling_game_detail
     status = harness.engine().run(SyncOptions())
     assert status.phase is Phase.CANCELLED
-    assert status.details_fetched == 3
+    assert status.details_fetched == 1
     harness.cancel.clear()
     harness.client.game_detail = original
     status = harness.engine().run(SyncOptions())
     assert status.phase is Phase.DONE
-    assert status.details_fetched == len(FIRST_SYNC_GAMES) - 3
+    assert status.details_fetched == len(FIRST_SYNC_GAMES) - 1
 
 
 def test_offline_preflight_makes_no_api_requests(harness):
@@ -224,9 +223,9 @@ def test_missing_badges_are_skipped_not_fatal(tmp_path):
 def test_badge_scope(tmp_path, scope, expect_badges):
     harness = Harness(tmp_path, on_device=frozenset())
     harness.engine().run(SyncOptions(badge_scope=scope))
-    zelda = harness.data.game_detail(355)
-    assert zelda is not None
-    first = zelda.achievements[0]
+    fire_emblem = harness.data.game_detail(554)
+    assert fire_emblem is not None
+    first = fire_emblem.achievements[0]
     key = badge_key(first.badge_name, locked=not first.unlocked)
     assert harness.media.has(key) is expect_badges
 
@@ -244,42 +243,10 @@ def test_recent_scope_takes_recently_played_games_only(tmp_path):
     harness = Harness(tmp_path, on_device=frozenset())
     harness.engine().run(SyncOptions(recent_days=30))
     assert has_any_badge(harness, 554)  # Fire Emblem, played the day before NOW
-    assert not has_any_badge(harness, FFTA)  # last played 33 days before NOW
-    assert not has_any_badge(harness, 355)  # 2023
-
-
-def test_background_sync_runs_on_a_worker_and_closes(tmp_path):
-    closed = threading.Event()
-    transport = FixtureTransport(FIXTURES, media_dir=build_media_dir(tmp_path / "host"))
-
-    def open_deps(_cancel):
-        client = RaClient("Balah", "k" * 32, transport, user_agent="test", min_interval=0)
-        data = DataCache.open(tmp_path / "data.db", "Balah")
-        media = MediaCache.open(tmp_path / "media.db", tmp_path / "scratch")
-
-        def close():
-            data.close()
-            media.close()
-            closed.set()
-
-        return SyncDeps(client, data, media, close=close)
-
-    sync = BackgroundSync(open_deps, online=lambda: True)
-    assert sync.start(SyncOptions())
-    sync.join(timeout=30)
-    assert sync.status().phase is Phase.DONE
-    assert closed.is_set()
-    assert not sync.status().running
-
-
-def test_background_sync_reports_open_failure(tmp_path):
-    def open_deps(_cancel):
-        raise CheevosError("no key")
-
-    sync = BackgroundSync(open_deps, online=lambda: True)
-    sync.start(SyncOptions())
-    sync.join(timeout=5)
-    assert sync.status().failure is Failure.ERROR
+    # Feed badges are kept for offline browsing, without fetching either full set.
+    assert harness.data.game_detail(FFTA) is None
+    assert harness.data.game_detail(355) is None
+    assert harness.media.has(badge_key("198102", locked=False))
 
 
 def test_auth_error_type_is_cheevos_error():
@@ -329,22 +296,6 @@ def test_network_drop_during_media_keeps_downloaded_images(tmp_path):
     status = harness.engine().run(SyncOptions())
     assert status.failure is Failure.NETWORK
     assert harness.media.has(avatar_key("Balah"))  # fetched before the first badge
-
-
-def test_background_sync_refuses_a_second_concurrent_start(tmp_path):
-    release = threading.Event()
-
-    def open_deps(_cancel):
-        release.wait(5)
-        raise CheevosError("stop")
-
-    sync = BackgroundSync(open_deps, online=lambda: True)
-    assert sync.start(SyncOptions())
-    assert sync.status().running
-    assert not sync.start(SyncOptions())
-    sync.cancel()
-    release.set()
-    sync.join(timeout=5)
 
 
 def test_interrupted_full_resync_resumes_as_full(harness):
@@ -415,30 +366,57 @@ def test_cancel_during_a_wait_for_the_next_request_cancels_at_once(tmp_path):
     assert time.monotonic() - started < 5
 
 
-def test_background_sync_hands_each_run_its_cancel_event(tmp_path):
-    seen = []
-
-    def open_deps(cancel):
-        seen.append(cancel)
-        raise CheevosError("stop")
-
-    sync = BackgroundSync(open_deps, online=lambda: True)
-    sync.start(SyncOptions())
-    sync.join(timeout=5)
-    sync.cancel()
-    assert seen
-    assert seen[0].is_set()
-
-
-def test_newest_unlocks_pull_in_only_the_games_that_hold_them(harness, monkeypatch):
+def test_recent_feed_needs_no_additional_game_sets_and_keeps_fixed_totals(harness, monkeypatch):
     monkeypatch.setattr("cheevos.core.sync.engine.RECENT_UNLOCK_COUNT", 2)
     harness.on_device = set()
+    states = []
+    original = harness.client.game_detail
+
+    def detail(game_id):
+        states.append(harness.tracker.snapshot())
+        return original(game_id)
+
+    harness.client.game_detail = detail
     status = harness.engine().run(SyncOptions(recent_days=7))
-    # Working set: Fire Emblem only. FFTA's 2 unlocks are the newest; Descent's are older.
-    assert status.details_fetched == 2
-    assert harness.data.game_detail(FFTA) is not None
+    assert status.details_fetched == 1  # Fire Emblem is the only game in the working set.
+    assert harness.data.game_detail(FFTA) is None
     assert harness.data.game_detail(3830) is None
     assert len(harness.data.recent_unlocks(2)) == 2
+    assert [(state.done, state.total) for state in states] == [(0, 1)]
+
+
+@pytest.mark.parametrize("device_time", [0, NOW + 10 * 365 * 86400])
+def test_recent_query_bounds_come_from_ra_even_without_a_time_sample(harness, device_time):
+    engine = harness.engine(now=device_time)
+    engine._sync_details = lambda _games, _options: None
+    engine._sync_media = lambda _games, _options: None
+    assert engine.run(SyncOptions()).phase is Phase.DONE
+    queries = [params for method, params in harness.transport.calls if "EarnedBetween" in method]
+    assert len(queries) == 1  # small account: one complete history window
+    profile = harness.data.load_profile()
+    latest = max(game.last_unlock_at or 0 for game in harness.data.games())
+    assert queries[0] == {"f": str(profile.member_since), "t": str(latest)}
+    assert len(harness.data.recent_unlocks(100)) == 14
+
+
+@pytest.mark.parametrize("cancelled", [False, True])
+def test_incomplete_feed_keeps_the_previous_snapshot(harness, cancelled):
+    cache = RecentFeedCache(harness.data)
+    previous = RecentFeed((), "old-library", NOW - 1)
+    cache.save(previous)
+    original = harness.client.recent_unlocks
+
+    def interrupted(*args, **kwargs):
+        if not cancelled:
+            raise NetworkError("history unavailable")
+        entries = original(*args, **kwargs)
+        harness.cancel.set()
+        return entries
+
+    harness.client.recent_unlocks = interrupted
+    state = harness.engine().run(SyncOptions())
+    assert state.phase is (Phase.CANCELLED if cancelled else Phase.FAILED)
+    assert cache.load() == previous
 
 
 def test_download_every_game_resumes_until_stopped(harness):
