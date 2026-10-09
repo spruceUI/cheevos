@@ -1,16 +1,7 @@
-import json
-
 from cheevos.core.local_games import local_games, on_device_game_ids
 from cheevos.core.models import LocalGame
 from cheevos.core.proxy import ProxyReader
 from cheevos.platform.paths import Paths
-
-FFTA_ROM = "/mnt/SDCARD/Roms/GBA/Final Fantasy Tactics Advance (Europe).gba"
-
-
-def write_pyui_cache(paths, entries):
-    paths.pyui_cheevos_cache.parent.mkdir(parents=True, exist_ok=True)
-    paths.pyui_cheevos_cache.write_text(json.dumps(entries))
 
 
 def write_proxy_ids(paths, text):
@@ -20,44 +11,23 @@ def write_proxy_ids(paths, text):
 
 def test_nothing_known(tmp_path):
     paths = Paths(sdcard=tmp_path)
-    assert local_games(paths, ProxyReader(paths)) == []
+    assert local_games(ProxyReader(paths)) == []
 
 
-def test_combines_pyui_cache_and_proxy_ids(tmp_path):
+def test_proxy_ids(tmp_path):
     paths = Paths(sdcard=tmp_path)
-    write_pyui_cache(
-        paths,
-        [
-            {
-                "rom_file_path": FFTA_ROM,
-                "game_system_name": "GBA",
-                "display_name": "Final Fantasy Tactics Advance",
-                "game_id": 519,
-            },
-            {"rom_file_path": "/mnt/SDCARD/Roms/PS/Descent.chd", "game_id": "3830"},
-            {"rom_file_path": "/no/id.gba", "game_id": None},
-            {"rom_file_path": "", "game_id": 5},
-            {"rom_file_path": "/bool.gba", "game_id": True},
-            {"rom_file_path": "/zero.gba", "game_id": 0},
-            {"rom_file_path": "/super.gba", "game_id": "²"},  # isdigit() but not int()
-            "not a dict",
-        ],
-    )
-    write_proxy_ids(paths, "519\n1446\n²\n")
-    assert local_games(paths, ProxyReader(paths)) == [
-        LocalGame(519, FFTA_ROM, "GBA", "pyui-cheevos-cache"),
-        LocalGame(3830, "/mnt/SDCARD/Roms/PS/Descent.chd", "", "pyui-cheevos-cache"),
+    write_proxy_ids(paths, "1446\n519\n²\n\n")
+    assert local_games(ProxyReader(paths)) == [
+        LocalGame(519, "", "", "raofflineproxy"),
         LocalGame(1446, "", "", "raofflineproxy"),
     ]
-    assert on_device_game_ids(paths, ProxyReader(paths)) == {519, 3830, 1446}
+    assert on_device_game_ids(ProxyReader(paths)) == {519, 1446}
 
 
-def test_unreadable_pyui_cache_is_ignored(tmp_path, caplog):
+def test_stale_pyui_cache_is_ignored(tmp_path):
     paths = Paths(sdcard=tmp_path)
-    paths.pyui_cheevos_cache.parent.mkdir(parents=True)
-    paths.pyui_cheevos_cache.write_text("{broken")
+    stale = tmp_path / "Saves" / "pyui-cheevos-cache.json"
+    stale.parent.mkdir(parents=True)
+    stale.write_text('[{"rom_file_path": "/mnt/SDCARD/Roms/GBA/x.gba", "game_id": 519}]')
     write_proxy_ids(paths, "7\n")
-    assert on_device_game_ids(paths, ProxyReader(paths)) == {7}
-    assert "Cannot read" in caplog.text
-    paths.pyui_cheevos_cache.write_text('{"not": "a list"}')
-    assert on_device_game_ids(paths, ProxyReader(paths)) == {7}
+    assert on_device_game_ids(ProxyReader(paths)) == {7}

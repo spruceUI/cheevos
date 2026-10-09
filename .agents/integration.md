@@ -46,10 +46,9 @@ Cheevos reads other software's files on the SD card and never writes them. It wr
   explains how to turn it on.
 
 ## On-device games (`core/local_games.py`)
-v1 uses only identifications that Spruce already made (no new ROM hashing):
-1. `Saves/pyui-cheevos-cache.json`: `[{rom_file_path, game_system_name, display_name,
-   game_id}]`, written by PyUI and RAOfflineProxy.
-2. RAOfflineProxy's `cached_game_ids.txt` (game IDs only), read directly.
+v1 uses only identifications that Spruce already made (no new ROM hashing): RAOfflineProxy's
+`cached_game_ids.txt` (game IDs only), read directly. Spruce no longer writes
+`Saves/pyui-cheevos-cache.json`; its game list comes from the proxy too.
 
 A game Spruce never identified isn't "on this device". Hashing ROMs ourselves would close that
 gap: on demand per system, with the proxy's `libraproxy_rchash.so` (rcheevos `rc_hash`) through
