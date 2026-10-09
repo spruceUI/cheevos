@@ -159,6 +159,40 @@ def test_only_flushed_awards_means_nothing_pending(paths):
     assert ProxyReader(paths).pending_awards("Balah") == []
 
 
+def test_old_queue_schema_preserves_pending_status_and_tie_order(paths):
+    db = make_db(
+        paths,
+        ddl="""
+        CREATE TABLE api_cache (cacheKey TEXT PRIMARY KEY, responseBody TEXT);
+        CREATE TABLE pending_awards (id INTEGER PRIMARY KEY, achievementId, queuedAt, status);
+        """,
+    )
+    db.execute("INSERT INTO api_cache VALUES (?, ?)", ("patch:519:balah", json.dumps(FFTA_PATCH)))
+    db.executemany(
+        "INSERT INTO pending_awards VALUES (?, ?, ?, ?)",
+        [
+            (5, 177851, 1000, "pending"),
+            (3, 177850, 1000, None),
+            (4, 177850, 1000, ""),
+            (6, 555, 1000, "pending"),
+            (7, 999, 0, "flushed"),
+            (8, "bad", 0, "pending"),
+        ],
+    )
+    db.commit()
+    db.close()
+
+    awards = ProxyReader(paths).pending_awards("Balah")
+
+    assert [(a.achievement_id, a.game_id) for a in awards] == [
+        (177850, 519),
+        (177850, 519),
+        (177851, 519),
+        (555, None),
+    ]
+    assert [a.queued_at for a in awards] == [1, 1, 1, 1]
+
+
 def test_patch_without_title_or_points(paths):
     db = make_db(paths)
     add_cache(db, "patch:7:balah", {"PatchData": {"Achievements": [{"ID": 70, "Points": "x"}]}})

@@ -74,6 +74,15 @@ unlocks show in the UI: [product.md](product.md).
     `list_pending_awards`.
   - `online_state.json` (`{"online": bool}`).
   - `cached_game_ids.txt` (one ID per line).
+- **Bounded metadata reads**: pass only queued achievement IDs to the patch lookup. Stream
+  the current account's responses first (using the stripped, lowercase username), then other
+  accounts only for unresolved IDs. Keep metadata only for those IDs and stop once all are
+  resolved. Iterate list or dictionary achievements without copying the collection. Memory is
+  bounded by the queue and one parsed response, rather than the whole proxy cache; an unknown
+  ID can still require scanning every patch. Match account suffixes literally with bound SQL
+  parameters. Use the existing `cacheKey`/`responseBody` columns and indexed `GLOB 'patch:*'`
+  prefix lookup, with no new schema, JSON SQL extension or writes. Additional cache formats
+  must follow the same queued-ID bound and fill gaps only after both patch-account passes.
 - **An unlock's game** comes from our synced achievement lists first (`AppContext.pending_awards`),
   then from the proxy's `patch:` entries. Spruce's RetroArch (1.22.2) only requests
   `r=achievementsets`, so the proxy caches `achievementsets:<hash>:<user>` while you play
