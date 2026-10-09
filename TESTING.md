@@ -141,6 +141,25 @@ fits list icons into each theme's layout; all themes use the same gold and muted
 - `uv run python scripts/make_synthetic_cache.py OUT_DB USERNAME --games 1000` builds a big
   synthetic cache for performance tests (large lists on a slow device).
 
+`scripts/benchmark_proxy.py` measures pending-award metadata reads on a disposable proxy
+cache. It creates 2,001 games with 100 achievements each and tests queues of two unlocks:
+early and late matches, another account's fallback, and unknown achievements. Each read gets
+a fresh process; the JSON report gives median elapsed time and peak RSS (including Python).
+Every run checks the returned metadata and queue order. It never uses an installed proxy.
+
+To compare a change, save the baseline before editing the lookup, then run:
+
+```sh
+mkdir -p build
+git show HEAD:src/cheevos/core/proxy.py > build/proxy-before.py
+# Make the lookup change, then:
+uv run python scripts/benchmark_proxy.py --baseline build/proxy-before.py
+```
+
+Without `--baseline`, it measures the current reader only. `--games`, `--per-game` and
+`--repeats` change the cache size and sample count. The RSS measurement needs macOS or Linux;
+desktop timings are comparisons, not estimates of speed on the Mini.
+
 ## Sync without the UI
 The sync engine runs on its own against a card:
 
