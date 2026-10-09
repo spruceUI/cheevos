@@ -104,7 +104,7 @@ look and counting rules come from the website's own source (RAWeb). The client l
 
 `ui/pyui/bar_colors.py` mirrors this and judges a row's background from the theme's background
 and highlight images (averaged once). Where the contrast is too low, it falls back to the theme's
-text colour in three strengths.
+text colour in three strengths; award indicators use contrasting black or white.
 
 **Profile numbers** (`core/stats.py`), after RAWeb's rules:
 - subsets (recognised by "[Subset" in the title) and test kits never count as games;

@@ -65,7 +65,8 @@ src/cheevos/
   ui/
     pyui/                bridge: bootstrap, views (lists, grids, popups), primitives (drawing,
                          input), text (fitting, glyph fallbacks), status_bar, bar_layout, glyphs,
-                         generated (PNG swatches, dots), row_bars, bar_colors, grid_frames,
+                         generated (PNG swatches, button glyphs), award_images (static awards),
+                         row_bars, bar_colors, grid_frames,
                          texture_budget (bounded PyUI texture caches), title_bar (a game's
                          top-bar title and award dot)
     screens/             home, profile, page (scrolling pages), games, game_detail, achievement,
@@ -79,6 +80,7 @@ src/cheevos/
     desktop/             dev only: device shim, keyboard/script controller, headless capture,
                          fixture/live environments, drills
   res/icons/             original outlines: 24/48 px status, 96/144 px lists and fallbacks
+  res/awards/            pre-rendered awards: dark/light and black/white contrast variants
 app/                     packaging: config.json, launch.sh, cheevos.png
 assets/                  icon sources (SVG)
 tests/                   unit and screen tests, fixtures/

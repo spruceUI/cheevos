@@ -133,6 +133,20 @@ PNGs, then review `make screens` and refresh the wiki with `make doc-screens`. L
 fallback icons use 96 or 144 px sources, while bottom-bar icons stay at 24 or 48 px. PyUI
 fits list icons into each theme's layout; all themes use the same gold and muted-lock colours.
 
+## Award indicators
+
+The Games list uses bundled PNGs in `src/cheevos/res/awards/`, generated on a development
+machine with `uv run python scripts/render_awards.py`. Each circle is 48 px across, with a
+transparent margin for anti-aliasing and a larger margin for mastery's glow. PyUI scales them
+to the theme's row size and keeps them in its bounded texture cache. There is no runtime
+circle or glow rasterizer. The game title reuses the same PNGs at a smaller size.
+
+Dark/light variants suit the ordinary and selected rows independently; black/white variants
+cover themes where gold and grey have too little contrast. Hollow rings stay transparent.
+The bridge covers just the bar strip inside them with the row's background colour.
+
+After changing the assets, review `make screens` and refresh `make doc-screens`.
+
 ## Recorded data
 - `uv run python scripts/record_fixtures.py <username> [--out tests/fixtures/ra]` records an
   account's API responses (profile, games, awards, recent unlocks, every game's achievements) as fixtures. The

@@ -70,13 +70,16 @@ def png_rows(path: Path, count: int) -> tuple[int, list[bytes]]:
 
 
 def gold_pixels(path: Path, top: int) -> int:
-    """Count RA-gold pixels (an award dot) in the top ``top`` rows of a screenshot."""
+    """Count saturated gold (including its shading) in the top rows of a screenshot."""
     bpp, rows = png_rows(path, top)
     return sum(
         1
         for row in rows
         for x in range(0, len(row), bpp)
-        if row[x] > 235 and 195 < row[x + 1] < 235 and row[x + 2] < 30
+        if row[x] > 150
+        and row[x + 1] > 110
+        and row[x] - row[x + 2] > 80
+        and row[x + 1] - row[x + 2] > 60
     )
 
 

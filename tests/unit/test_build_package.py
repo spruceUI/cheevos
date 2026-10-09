@@ -23,6 +23,9 @@ def test_device_package_includes_license_and_excludes_desktop(tmp_path) -> None:
         icon_files = [name for name in release.namelist() if "/res/icons/" in name]
         assert all(name.endswith(("/", ".png")) for name in icon_files)
         assert not any("/res/icons/72/" in name for name in icon_files)
+        for style in ("dark", "light", "black", "white"):
+            for kind in ("mastered", "completed", "beaten-hardcore", "beaten-softcore"):
+                assert f"Cheevos/cheevos/res/awards/{kind}-{style}.png" in release.namelist()
         assert release.getinfo("Cheevos/launch.sh").external_attr >> 16 & 0o777 == 0o755
         assert not any("desktop/" in name or "__pycache__/" in name for name in release.namelist())
         assert "Cheevos/removed.py" not in release.namelist()

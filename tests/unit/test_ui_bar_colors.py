@@ -1,5 +1,3 @@
-import pytest
-
 from cheevos.core.models import AwardKind
 from cheevos.ui.pyui import generated
 from cheevos.ui.pyui.bar_colors import (
@@ -42,18 +40,6 @@ def test_unreadable_backgrounds_fall_back_to_the_theme_text_colour():
     assert colors.hardcore.alpha > colors.casual.alpha > colors.track.alpha
     assert colors.markers[AwardKind.MASTERED].filled
     assert not colors.markers[AwardKind.BEATEN_SOFTCORE].filled
-
-
-@pytest.mark.parametrize(("ring", "centre_alpha"), [(0, 255), (2, 0)])
-def test_disc_is_filled_or_a_ring(ring, centre_alpha):
-    size = 10
-    pixels = generated.disc_pixels(GOLD, size, ring)
-    assert len(pixels) == size * size * 4
-    corner, centre = pixels[3], pixels[(5 * size + 5) * 4 + 3]
-    assert corner == 0
-    assert centre == centre_alpha
-    edge = pixels[(5 * size + 0) * 4 + 3]  # left edge, mid-height: part of the ring too
-    assert edge > 0
 
 
 def test_average_composites_translucent_pixels_over_the_background():
