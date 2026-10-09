@@ -398,15 +398,6 @@ def test_first_hardcore_unlock_is_stored_not_derived_from_cached_games(cache):
     assert cache.first_hardcore_unlock() == 1_500_000_000
 
 
-def test_nth_newest_unlock(cache):
-    recorded = detail_from_fixture(519)
-    cache.save_game_detail(recorded, fingerprint="x", synced_at=1)
-    times = sorted((a.unlocked_at for a in recorded.achievements if a.unlocked_at), reverse=True)
-    assert cache.nth_newest_unlock(1) == times[0]
-    assert cache.nth_newest_unlock(len(times)) == times[-1]
-    assert cache.nth_newest_unlock(len(times) + 1) is None
-
-
 def test_unlocked_among(cache):
     recorded = detail_from_fixture(519)
     cache.save_game_detail(recorded, fingerprint="x", synced_at=1)

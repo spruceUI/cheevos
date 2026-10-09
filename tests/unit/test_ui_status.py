@@ -75,9 +75,11 @@ def finished(
     [
         (running(Phase.PREFLIGHT), "Checking connection"),
         (running(Phase.LIBRARY), "Syncing game list"),
-        (running(Phase.DETAILS, done=2, total=12, current="FFTA"), "Syncing 3/12 · FFTA"),
-        (running(Phase.DETAILS, done=12, total=12, current="FFTA"), "Syncing 12/12 · FFTA"),
+        (running(Phase.DETAILS, done=2, total=12, current="FFTA"), "Games 3/12"),
+        (running(Phase.DETAILS, done=12, total=12, current="FFTA"), "Games 12/12"),
         (running(Phase.DETAILS), "Syncing achievements"),
+        (running(Phase.RECENT), "Syncing recent unlocks"),
+        (running(Phase.RECENT, done=80), "Recent unlocks · 80 found"),
         (running(Phase.MEDIA, done=4, total=40), "Downloading images 4/40"),
     ],
 )

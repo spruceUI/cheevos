@@ -15,6 +15,9 @@
 | **Clear image cache** | Deletes downloaded badges and icons (shows how much space they use). They download again when needed. |
 | **About** | Version, license and credits. |
 
+Both **On-device and recent games** and **All games** also download the badges shown in
+Recent unlocks, even for games whose full achievement lists aren't downloaded.
+
 **A note on "Story only":** RetroAchievements has no spoiler flag. "Story only" relies on the type
 tags set developers add (Progression, Win condition, Missable). Tagging started in 2023, so many
 older sets have no tags, and "Story only" hides nothing there. Use **All** for those games.
