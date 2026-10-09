@@ -188,12 +188,16 @@ jobs:
           ref: ${{ env.SPRUCEOS_BASE_BRANCH }}
           token: ${{ secrets.SPRUCEOS_PR_TOKEN }}
           path: build/spruceos
-          sparse-checkout: App/Cheevos
+          sparse-checkout: |
+            App/Cheevos
+            Licenses/Cheevos
 
       - name: Mirror the released app
         run: |
-          mkdir -p build/spruceos/App/Cheevos
-          rsync --archive --delete build/spruce-release/Cheevos/ build/spruceos/App/Cheevos/
+          mkdir -p build/spruceos/App/Cheevos build/spruceos/Licenses/Cheevos
+          rsync --archive --delete --exclude /LICENSE \
+            build/spruce-release/Cheevos/ build/spruceos/App/Cheevos/
+          cp build/spruce-release/Cheevos/LICENSE build/spruceos/Licenses/Cheevos/LICENSE.Cheevos.txt
           chmod 755 build/spruceos/App/Cheevos/launch.sh
 
       - name: Prepare the SpruceOS pull request
@@ -205,13 +209,15 @@ jobs:
           push-to-fork: ${{ env.SPRUCEOS_FORK }}
           base: ${{ env.SPRUCEOS_BASE_BRANCH }}
           branch: cheevos/${{ github.ref_name }}
-          add-paths: App/Cheevos/
+          add-paths: |
+            App/Cheevos/
+            Licenses/Cheevos/
           commit-message: "App: Update Cheevos to ${{ github.ref_name }}"
           title: "App: Update Cheevos to ${{ github.ref_name }}"
           body: |
             Mirror Cheevos [${{ github.ref_name }}](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}) into `App/Cheevos/` for inclusion in SpruceOS.
 
-            The app is copied from the published device ZIP, including the launcher, icon, Python runtime code and MIT license. Removed app files are removed here too.
+            The app is copied from the published device ZIP, including the launcher, icon and Python runtime code; its MIT license goes to `Licenses/Cheevos/LICENSE.Cheevos.txt`. Removed app files are removed here too.
 
             Validation: Cheevos lint, conventions, shellcheck, type check and the unit/screen test suite passed for the tagged commit. The stable release and wiki publication succeeded.
 
