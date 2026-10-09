@@ -2,7 +2,9 @@
 
 Cheevos reads other software's files on the SD card and never writes them. It writes only
 `Saves/cheevos/`, `/tmp/cheevos/` and its log. Every path comes from
-`cheevos.platform.paths`.
+`cheevos.platform.paths`. One exception: after the app exits, `launch.sh` copies the Web API
+key into Spruce's `webApiKey` setting (RetroAchievements Settings), when Spruce has it, so a key
+typed in the app shows there too. PyUI isn't running at that point, so it can't overwrite it.
 
 ## Credentials and first run (`core/credentials.py`)
 - **Username**, first non-empty of:
