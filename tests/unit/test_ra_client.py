@@ -21,6 +21,7 @@ from cheevos.core.ra_client.client import default_user_agent
 from cheevos.core.ra_client.pacer import Pacer
 from cheevos.core.ra_client.redact import install_redaction
 from cheevos.core.ra_client.transport import API_HOST, MEDIA_HOST
+from cheevos.core.storage.data_cache import DataCache
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "ra"
 KEY = "TESTKEY0123456789abcdefTESTKEY01"
@@ -122,6 +123,24 @@ def test_game_detail_not_recorded_is_payload_error():
     client, _ = fixture_client()
     with pytest.raises(ApiPayloadError, match="404"):
         client.game_detail(99999)
+
+
+def test_live_recording_without_a_set_parses_and_stays_cached(tmp_path):
+    transport = FixtureTransport(FIXTURES.parent / "ra-no-set")
+    detail = make(transport).game_detail(34131)
+    assert detail.title == "~Demo~ Three Tribes"
+    assert detail.console_name == "Game Boy Advance"
+    assert detail.achievements == ()
+    assert detail.num_distinct_players == 0
+    assert detail.num_players_casual == detail.num_players_hardcore == 0
+    path = tmp_path / "data.db"
+    cache = DataCache.open(path, "Balah")
+    assert cache.game_detail(detail.game_id) is None
+    cache.save_game_detail(detail, fingerprint="0:0:0:0:", synced_at=1)
+    cache.close()
+    cache = DataCache.open(path, "Balah")
+    assert cache.game_detail(detail.game_id) == detail
+    cache.close()
 
 
 def test_awards():

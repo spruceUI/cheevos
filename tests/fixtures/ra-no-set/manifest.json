@@ -1,0 +1,13 @@
+{
+  "recorded_at": 1791659252,
+  "requests": [
+    {
+      "file": "game_34131.json",
+      "method": "API_GetGameInfoAndUserProgress",
+      "params": {
+        "g": 34131,
+        "a": 1
+      }
+    }
+  ]
+}

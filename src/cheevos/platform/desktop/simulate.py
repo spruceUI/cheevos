@@ -2,6 +2,7 @@
 
 ``offline`` / ``auth`` make the sync on open fail; ``clock`` recovers from 1970. ``empty`` serves
 an account with no games. ``proxy`` adds an enabled RAOfflineProxy with queued unlocks.
+``noset`` removes the most recent game's achievement set and counts.
 ``showcase`` gives the fixture games assorted progress and awards (mastered, completed, beaten
 in both modes, mixed hardcore and casual), with achievement lists to match, and a made-up
 account, to review progress bars and the awards wall, and to take the screenshots for the docs
@@ -35,6 +36,7 @@ from cheevos.core.ra_client.transport import (
     Transport,
 )
 from cheevos.platform.desktop.clock_drill import ClockRecoveryTransport
+from cheevos.platform.desktop.no_set_drill import NoSetTransport
 from cheevos.platform.desktop.showcase_history import unlocks as showcase_unlocks
 from cheevos.platform.paths import Paths
 
@@ -43,6 +45,7 @@ SCENARIOS = (
     "clock",
     "auth",
     "empty",
+    "noset",
     "proxy",
     "showcase",
     "awards",
@@ -380,6 +383,7 @@ def simulation(
         "offline": Simulation(online=False, auto_sync=True),
         "auth": Simulation(transport=_Rejecting, auto_sync=True),
         "empty": Simulation(transport=lambda: FixtureTransport(empty), seeds_card=True),
+        "noset": Simulation(transport=lambda: NoSetTransport(source()), seeds_card=True),
         "showcase": Simulation(transport=lambda: _Showcase(source()), seeds_card=True),
         "ondemand": Simulation(transport=lambda: _SlowGames(source()), download_all=False),
     }

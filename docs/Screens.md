@@ -62,6 +62,8 @@ and win) or sort (points, rarity, unlocked first, and more).
 
 ![Achievement grid of a mastered game](images/game-grid.png)
 
+If a game has no achievements, Cheevos says so. Press **A** or **B** to return to the games list.
+
 ## An achievement
 The badge, title, points, type, when you unlocked it, how many players have it, and the
 description. If RetroArch saved a screenshot when you unlocked it, it's shown too: press **A**

@@ -93,6 +93,7 @@ real. Each drill gets a fresh card.
 | `clock` | App clock starts in 1970, then recovers from RA's response time and syncs |
 | `auth` | The API key is rejected |
 | `empty` | An account with no games |
+| `noset` | Fire Emblem, the first game in the list, with its achievement set and counts removed. Shows the zero-total list row and the message; A or B returns to the games list. |
 | `proxy` | RAOfflineProxy enabled, with unlocks waiting to sync (games list `+N`, Recent unlocks, the Settings row). Descent's has no `patch:` data, as after playing online with RetroArch 1.22. |
 | `showcase` | Every kind of progress (mastered, completed, beaten in both modes, mixed hardcore and casual), with achievement lists to match, awards, a month of recent unlocks and a made-up account. Used for the docs' screenshots. |
 | `awards` | A big account's awards wall, from a recording of that account's awards (below), with live images. Its games aren't in the fixtures, so opening one tries to load it and says "Loading failed". |
