@@ -200,6 +200,21 @@ jobs:
           cp build/spruce-release/Cheevos/LICENSE build/spruceos/Licenses/Cheevos/LICENSE.Cheevos.txt
           chmod 755 build/spruceos/App/Cheevos/launch.sh
 
+      - name: Build the SpruceOS pull request description
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_INTRO: |
+            Mirror Cheevos [${{ github.ref_name }}](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}) into `App/Cheevos/` for inclusion in SpruceOS.
+        run: |
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --json body --jq '.body' > build/spruce-release/notes.md
+          if ! grep -q '^## Changes$' build/spruce-release/notes.md; then
+            echo "::error::Published release notes have no Changes section."
+            exit 1
+          fi
+          printf '%s\n' "$PR_INTRO" > build/spruce-pr-body.md
+          sed -n '/^## Changes$/,$p' build/spruce-release/notes.md >> build/spruce-pr-body.md
+
       - name: Prepare the SpruceOS pull request
         id: pr
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
@@ -214,12 +229,7 @@ jobs:
             Licenses/Cheevos/
           commit-message: "App: Update Cheevos to ${{ github.ref_name }}"
           title: "App: Update Cheevos to ${{ github.ref_name }}"
-          body: |
-            Mirror Cheevos [${{ github.ref_name }}](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}) into `App/Cheevos/` for inclusion in SpruceOS.
-
-            The app is copied from the published device ZIP, including the launcher, icon and Python runtime code; its MIT license goes to `Licenses/Cheevos/LICENSE.Cheevos.txt`. Removed app files are removed here too.
-
-            Validation: Cheevos lint, conventions, shellcheck, type check and the unit/screen test suite passed for the tagged commit. The stable release and wiki publication succeeded.
+          body-path: build/spruce-pr-body.md
 
       - name: Link the upstream pull request
         env:

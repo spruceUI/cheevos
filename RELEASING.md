@@ -47,7 +47,9 @@ need only the `Cheevos-<version>.zip`.
 The `spruceos` job replaces only `App/Cheevos/` in an upstream checkout, removing files that
 are no longer in the device package. It preserves the launcher's executable bit and includes
 Cheevos's MIT license. Source docs, tests and the desktop runner are not part of the package.
-The PR links the Cheevos release and records the checks that passed.
+The PR links the Cheevos release and copies the published release's Changes section, including
+the linked PRs, commits and full changelog. This covers changes since the previous stable
+release, including intervening pre-releases (or the whole history for the first stable release).
 
 **One-time setup** in the Cheevos repository:
 
