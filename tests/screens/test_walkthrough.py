@@ -13,6 +13,9 @@ from pathlib import Path
 
 import pytest
 
+from cheevos.core.storage.data_cache import DataCache
+from cheevos.platform.desktop.no_set_drill import GAME_ID
+
 REPO = Path(__file__).resolve().parents[2]
 PYUI_DIR = Path(os.environ.get("CHEEVOS_PYUI_DIR", REPO / ".spruceos/App/PyUI/main-ui"))
 
@@ -196,6 +199,28 @@ def test_games_list_is_kept_while_its_games_are_unchanged(tmp_path):
     assert_shots(tmp_path, ["games_kept", "sorted"])
     assert stderr.count("Sync done") == 2
     assert stderr.count("game rows in") == 2
+
+
+def test_game_without_an_achievement_set_returns_to_the_list(tmp_path):
+    script = (
+        "down,a,shot:games,a,shot:loading,wait:4,shot:no_set,b,shot:after_b,"
+        "a,a,shot:after_a,select,shot:details"
+    )
+    run_app(tmp_path, script, simulate="noset")
+    assert_shots(tmp_path, ["games", "loading", "no_set", "after_b", "after_a", "details"])
+    shots = tmp_path / "shots" / "640x480"
+    assert (shots / "loading.png").read_bytes() != (shots / "no_set.png").read_bytes()
+    # Ignore the top-bar clock; returning preserves the row selection and scroll position.
+    rows = png_rows(shots / "games.png", 480)[1][64:]
+    assert png_rows(shots / "after_b.png", 480)[1][64:] == rows
+    assert png_rows(shots / "after_a.png", 480)[1][64:] == rows
+    data = DataCache.open(tmp_path / "sdcard-noset/Saves/cheevos/cache/data.db", "Balah")
+    game, detail = data.game(GAME_ID), data.game_detail(GAME_ID)
+    assert game is not None
+    assert detail is not None
+    assert game.max_possible == game.earned == game.earned_hardcore == 0
+    assert detail.achievements == ()
+    data.close()
 
 
 def test_award_dot_follows_its_title(tmp_path):
