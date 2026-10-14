@@ -15,13 +15,23 @@ logger = logging.getLogger(__name__)
 
 _LINE_SHARE = 1 / 32  # 2 px at RA's 64 px badge size, 3 px at the 96 px game icon size
 _ICON_SHARE = 0.125  # DescriptiveListView's icon column
+# RA's holoimage border (the $2 Patreon badge): a 135° gradient, top left to bottom right.
+_HOLO_STOPS: tuple[RGB, ...] = (
+    (255, 215, 0),
+    (255, 154, 90),
+    (255, 106, 213),
+    (138, 125, 255),
+    (86, 200, 255),
+    (255, 215, 0),
+)
 Bounds = tuple[int, int, int, int]
 
 
 class Frame(Enum):
-    """Image borders shared by achievements and the awards wall, and the badge grid's focus."""
+    """Image borders shared by achievements and awards, and the badge grid's focus."""
 
     GOLD = "gold"
+    HOLO = "holo"  # RA's holographic border, as wide as gold
     SILVER = "silver"
     SILVER_THIN = "silver-thin"
     # The badge grid's selection: a white ring with room inside for a gold frame drawn after it.
@@ -62,11 +72,12 @@ def padding(frame: Frame, width: int, height: int) -> int:
     return sum(thickness for _color, thickness in _bands(frame, width, height))
 
 
-def _bands(frame: Frame, width: int, height: int) -> tuple[tuple[RGB, int], ...]:
+def _bands(frame: Frame, width: int, height: int) -> tuple[tuple[RGB | None, int], ...]:
     """Return a frame's bands from the outside in: colour and thickness.
 
     Every style has a 1 px black outer edge. The focus ring's inner black band is exactly
-    a gold frame's size, so a gold frame drawn after it fits inside the white ring.
+    a gold frame's size, so a gold frame drawn after it fits inside the white ring. A band
+    without a colour is the holographic gradient.
 
     Args:
         frame: Border style.
@@ -81,6 +92,8 @@ def _bands(frame: Frame, width: int, height: int) -> tuple[tuple[RGB, int], ...]
         return ((BLACK, 1), (WHITE, line), (BLACK, line + 1))
     if frame is Frame.SILVER_THIN:
         return ((BLACK, 1), (ZINC_400, max(line // 2, 1)))
+    if frame is Frame.HOLO:
+        return ((BLACK, 1), (None, line))
     return ((BLACK, 1), (GOLD if frame is Frame.GOLD else ZINC_300, line))
 
 
@@ -103,9 +116,11 @@ def _image(frame: Frame, width: int, height: int) -> tuple[str, int]:
     inset = 0
     # Nested rectangles from the outside in; the artwork area stays transparent.
     for color, thickness in bands:
-        row = bytes((*color, 255)) * (outer_width - 2 * inset)
+        row = bytes((*color, 255)) * (outer_width - 2 * inset) if color is not None else b""
         start = (inset * outer_width + inset) * 4
-        for _ in range(outer_height - 2 * inset):
+        for y in range(inset, outer_height - inset):
+            if color is None:
+                row = _holo_row(y, inset, outer_width, outer_height)
             pixels[start : start + len(row)] = row
             start += outer_width * 4
         inset += thickness
@@ -118,6 +133,39 @@ def _image(frame: Frame, width: int, height: int) -> tuple[str, int]:
         f"frame-{frame.value}-{width}x{height}.png", outer_width, outer_height, bytes(pixels)
     )
     return str(path), outer
+
+
+def holo_color(position: float) -> RGB:
+    """Return RA's holographic gradient colour at a position along it.
+
+    Args:
+        position: 0 (top left) to 1 (bottom right).
+
+    Returns:
+        The colour.
+    """
+    scaled = min(max(position, 0.0), 1.0) * (len(_HOLO_STOPS) - 1)
+    index = min(int(scaled), len(_HOLO_STOPS) - 2)
+    share = scaled - index
+    start, end = _HOLO_STOPS[index], _HOLO_STOPS[index + 1]
+    red, green, blue = (round(a + (b - a) * share) for a, b in zip(start, end, strict=True))
+    return red, green, blue
+
+
+def _holo_row(y: int, inset: int, width: int, height: int) -> bytes:
+    """Return one row of the holographic band's rectangle (opaque RGBA).
+
+    Args:
+        y: Row in the frame image.
+        inset: Where the band's rectangle starts on each side.
+        width: Frame image width.
+        height: Frame image height.
+
+    Returns:
+        The row's pixels, from ``inset`` to ``width - inset``.
+    """
+    span = max(width + height - 2, 1)
+    return b"".join(bytes((*holo_color((x + y) / span), 255)) for x in range(inset, width - inset))
 
 
 @functools.lru_cache(maxsize=128)

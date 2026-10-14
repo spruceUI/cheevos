@@ -44,7 +44,12 @@ GAMES_SUMMARY = "{count} games · {finished} mastered or beaten"
 RECENT = "Recent unlocks"
 NOTHING_UNLOCKED = "Nothing unlocked yet"
 AWARDS = "Awards"
-AWARDS_SUMMARY = "{mastered} mastered · {beaten} beaten"
+AWARDS_MASTERED = "{count} mastered"
+AWARDS_COMPLETED = "{count} completed"
+AWARDS_EVENTS = "{count} events"
+AWARDS_EVENT = "1 event"
+AWARDS_SITE = "{count} site"
+AWARDS_NONE = "No awards yet"
 SETTINGS = "Settings"
 SETTINGS_SUMMARY = "Badges, sync, API key, about"
 
@@ -111,6 +116,7 @@ ACH_SORTS = {
 VIEWS = {"list": "List", "grid": "Grid"}
 HINT_GRID = "Grid"
 HINT_LIST = "List"
+HINT_CAROUSEL = "Carousel"
 NO_ACHIEVEMENT_SET = "This game has no achievements."
 NO_ACHIEVEMENTS = "No achievements match this filter."
 DETAIL_META = "{points} · {retro} RetroPoints"
@@ -159,20 +165,56 @@ MONTH_EMPTY = "No unlocks in the last 30 days"
 MONTH_START = "30 days ago"
 MONTH_END = "Today"
 HINT_SEE_MORE = "See more"
-NO_AWARDS = "No mastered or beaten games yet. Keep playing!"
+NO_AWARDS = (
+    "No awards yet. Master or complete a game, or join an event, and its badge shows here. "
+    "Beaten games are in Games."
+)
 NO_AWARDS_MATCH = "No awards match this filter."
 AWARDS_TITLE = "Awards · {count}"
 AWARD_FILTERS = {
-    "all": "All awards",
-    "mastery": "Mastered and completed",
-    "beaten": "Beaten",
+    "all": "All",
+    "game": "Game Awards",
+    "mastered": "Mastered",
+    "completed": "Completed",
+    "event": "Event Awards",
+    "site": "Site Awards",
 }
+AWARD_FILTER_COUNT = "{label} · {count}"
 AWARD_SORTS = {
     "newest": "Newest first",
     "site": "Site order",
     "title": "Title",
     "console": "Console",
 }
+AWARD_VIEWS = {"carousel": "Carousel", "grid": "Grid", "list": "List"}
+# How awards read, after RA's profile tooltips (.agents/product.md, "Awards").
+EVENT_COMPLETED = "Awarded for completing this event"
+EVENT_POINT = "Awarded for earning at least 1 point"
+EVENT_POINTS = "Awarded for earning at least {points} points"
+EVENT_AWARD = "Event award"
+EARNED_TIER = "Earned tier: {tier}"
+EARNED_ON = "Earned {date}"
+PLAYTEST = "Playtester Award"
+UNLOCKS_YIELD = "Achievements Earned by Others"
+UNLOCKS_YIELD_TEXT = (
+    "Awarded for being a hard-working developer and producing achievements that have been "
+    "earned over {count} times!"
+)
+POINTS_YIELD = "Achievement Points Earned by Others"
+POINTS_YIELD_TEXT = (
+    "Awarded for producing many valuable achievements, providing over {count} points to the "
+    "community!"
+)
+DEVELOPER_TEXT = "Awarded for achievements made for the community"
+PATREON = "Patreon Supporter"
+PATREON_TEXT = "Thank you so much for your support!"
+PATREON_TIER_TEXT = "$2 Patreon supporter. Thank you so much for your support!"
+PATREON_SINCE = "Supporting RA since {date}"
+MEDIA = "Media Contribution"
+MEDIA_TEXT = "Awarded for contributing {count} approved screenshots to game galleries."
+MEDIA_ANY_TEXT = "Awarded for contributing approved screenshots to game galleries."
+LEGEND = "Certified Legend"
+LEGEND_TEXT = "Specially Awarded to a Certified RetroAchievements Legend"
 PROXY = "RAOfflineProxy"
 PROXY_OFF = "Off · unlocks need Wi-Fi"
 PROXY_DISABLED = (

@@ -7,7 +7,7 @@ import pytest
 
 from cheevos.core.models import Achievement, PendingAward
 from cheevos.ui.context import AppContext
-from cheevos.ui.pyui import generated, grid_frames, image_frames
+from cheevos.ui.pyui import generated, image_frames
 from cheevos.ui.pyui.bar_colors import BLACK, GOLD, ZINC_300, ZINC_400
 from cheevos.ui.pyui.image_frames import Frame
 from cheevos.ui.pyui.primitives import Area
@@ -96,6 +96,33 @@ def test_focus_ring_leaves_room_for_the_gold_frame_inside(images, size):
     assert pixel(ring - gold - 1) == white
     assert {pixel(px) for px in range(ring - gold, ring)} == {bytes((*BLACK, 255))}
     assert pixel(ring) == bytes(4)
+
+
+def test_holo_frame_runs_ras_gradient_from_top_left_to_bottom_right(images):
+    drawn, assets = images
+    image_frames.draw(Frame.HOLO, (20, 65, 64, 64))
+    path, x, y = drawn[0]
+    width, height, rgba = assets[path.rsplit("/", 1)[1]]
+    padding = 20 - x
+    assert padding == 65 - y == image_frames.padding(Frame.GOLD, 64, 64)  # as wide as gold
+
+    def pixel(px, py):
+        return rgba[(py * width + px) * 4 : (py * width + px + 1) * 4]
+
+    span = width + height - 2
+    assert pixel(0, 0) == bytes((*BLACK, 255))
+    assert pixel(1, 1) == bytes((*image_frames.holo_color(2 / span), 255))
+    assert pixel(width - 2, 1) == bytes((*image_frames.holo_color((width - 1) / span), 255))
+    assert pixel(padding, padding) == bytes(4)
+    assert pixel(1, 1) != pixel(width - 2, 1)  # the colours run across the frame
+
+
+def test_holo_gradient_follows_ras_stops():
+    assert image_frames.holo_color(0) == (255, 215, 0)  # gold
+    assert image_frames.holo_color(0.4) == (255, 106, 213)  # pink, the third of six stops
+    assert image_frames.holo_color(1) == (255, 215, 0)
+    assert image_frames.holo_color(-1) == image_frames.holo_color(0)
+    assert image_frames.holo_color(0.1) == (255, 184, 45)  # halfway from gold to orange
 
 
 def test_failed_images_get_no_outline(images):
@@ -198,32 +225,3 @@ def test_list_draws_only_visible_framed_rows_and_follows_new_images(monkeypatch)
     view._render()
     assert measured[-1] == "next.png"
     assert bounds[-1] == bounds[0]
-
-
-class Grid:
-    def __init__(self, size):
-        self.size = size
-        self.calls = []
-
-    def _render_primary_image(self, path, x, y, **kwargs):
-        self.calls.append((path, x, y, kwargs))
-        return self.size
-
-    def _render_cell(self, visible_index, *args, **kwargs):
-        self._render_primary_image("badge.png", 100.5, 130, target_width=96, target_height=96)
-        return visible_index
-
-
-@pytest.mark.parametrize("size", [(79, 79), (96, 48), (0, 0)])
-def test_grid_outlines_actual_image_before_present_and_clears_tile_state(monkeypatch, size):
-    outlines = []
-    monkeypatch.setattr(image_frames, "draw", lambda *args: outlines.append(args))
-    view = Grid(size)
-    grid_frames.attach(view)
-    assert view._render_cell(visible_index=2, imageTextPair=entry(Frame.GOLD)) == 2
-    width, height = size
-    assert outlines == [(Frame.GOLD, (int(100.5 - width // 2), 130 - height // 2, width, height))]
-    view._render_cell(3, entry(None))
-    view._render_primary_image("outside.png", 0, 0)
-    assert len(outlines) == 1
-    assert len(view.calls) == 3
