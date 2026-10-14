@@ -82,7 +82,8 @@ def test_images_follow_the_selection_and_queue_the_next_ones(monkeypatch):
     assert len(dropped) == 1
     # The five on screen, then five more each side for the next moves.
     assert sum(1 for e in entries if e.asked) == 15
-    assert entries[10].image_path == entries[10].image_path_selected == "A10.png"
+    assert entries[10].image_path == entries[10].image_path_selected
+    assert entries[10].image_path.startswith("A10.png#")  # the path, keyed by its entry
     assert entries[2].asked == entries[18].asked == []
     drawn.images(view)
     assert len(dropped) == 1  # the same selection keeps its downloads
@@ -91,7 +92,7 @@ def test_images_follow_the_selection_and_queue_the_next_ones(monkeypatch):
     assert len(dropped) == 2
 
 
-def test_frames_follow_each_drawn_image(monkeypatch):
+def test_frames_follow_each_drawn_award(monkeypatch):
     monkeypatch.setattr(visible_images, "new_window", lambda: None)
     rendered, outlines = [], []
     display = SimpleNamespace(
@@ -105,16 +106,24 @@ def test_frames_follow_each_drawn_image(monkeypatch):
         entry("Gold", frame=Frame.GOLD),
         entry("Plain"),
         entry("Holo", frame=Frame.HOLO),
+        # Images not downloaded: both show the fallback, each with its own frame.
         entry("Missing", frame=Frame.GOLD, path="fallback.png"),
         entry("Missing too", path="fallback.png"),
     ]
     drawn = painter()
     drawn.images(View(entries, selected=2))
     geometry = drawn.geometry
-    drawn.image("Gold.png", 320, 255.6, None)
-    drawn.image("Plain.png", 100, 50, None)
-    drawn.image("Holo.png", 500, 50, None)
-    drawn.image("fallback.png", 600, 50, None)  # shared by two awards with different frames
+    for made, x in zip(entries, (320, 100, 500, 600, 50), strict=True):
+        drawn.image(made.image_path, x, 255.6 if x == 320 else 50, None)
+    drawn.image("other.png", 200, 50, None)  # an image PyUI found itself is drawn as it is
+    assert [args[0] for args in rendered] == [
+        "Gold.png",
+        "Plain.png",
+        "Holo.png",
+        "fallback.png",
+        "fallback.png",
+        "other.png",
+    ]
     assert rendered[0] == (
         "Gold.png",
         320,
@@ -125,7 +134,11 @@ def test_frames_follow_each_drawn_image(monkeypatch):
         None,
     )
     top = geometry.image_y - 50
-    assert outlines == [(Frame.GOLD, (260, top, 120, 100)), (Frame.HOLO, (440, top, 120, 100))]
+    assert outlines == [
+        (Frame.GOLD, (260, top, 120, 100)),
+        (Frame.HOLO, (440, top, 120, 100)),
+        (Frame.GOLD, (540, top, 120, 100)),
+    ]
 
 
 def test_details_are_fitted_once_per_selection(monkeypatch):

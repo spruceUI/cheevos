@@ -121,8 +121,10 @@ of PyUI's views, without patching PyUI.
     downloads still waiting (`visible_images.new_window`). `VisibleImages` doesn't fit: the
     carousel's window wraps around the list;
   - replaces `_render_image` to fit images in the room above the details and frame their
-    actual drawn bounds (frames looked up by image path; a fallback shared by two different
-    frames gets none);
+    actual drawn bounds. PyUI passes only the entry's `image_path`, so `_clear` sets it to
+    `<path>#<entry id>` and the painter looks up that entry's image and frame. Keyed by path
+    alone, awards sharing a fallback (a mastered and a completed game, images not downloaded)
+    lost their frames depending on which tiles the slide included, which only CI caught;
   - draws short lists once each: PyUI repeats the options until there are more than twice the
     tiles (`PreparedView` maps the index back with `% count`), and skips the animation below
     three; PyUI resumes drawing after an animation without clearing, so `_clear` runs again;

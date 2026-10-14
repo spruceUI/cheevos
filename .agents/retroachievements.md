@@ -145,9 +145,13 @@ Tier numbers are indices, not hardcore flags.
   (tiers included) gives each tier's label, points and badge.
 - **API gap (needs an upstream change):** no API states an event's total points. We add up
   its published achievements' points from v2 `event-achievements` (published only, for an
-  ordinary key), which is what RA's `points_total` sums. Asking RA to expose `pointsTotal` on
-  v2 `events` (or the event's game ID) would save these requests. Measured: a 35-event account
-  with 14 tiered awards needs 8 pages (about 710 rows), once, then again after 30 days.
+  ordinary key), which is what RA's `points_total` sums. v2 `events` has
+  `achievementsPublished`, but it's a count, not points: event achievements are worth 1 to 50
+  points, and on the 35-event account below 5 of the 14 tiered events had more points than
+  achievements (10 worth 16). Asking RA to expose `pointsTotal` on v2 `events` would save these
+  requests: RAWeb's `EventSchema` already joins the event's game, so it's one field
+  (`games.points_total`). Measured: a 35-event account with 14 tiered awards needs 8 pages
+  (about 710 rows, ~25 s at our pacing) on its first sync, then again after 30 days.
 - Until the total is known (the request failed), a tier is described by its points, which is
   always true; before an event is fetched at all, RA's own title and image show with "Event
   award".

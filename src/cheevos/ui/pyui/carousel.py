@@ -31,6 +31,7 @@ from cheevos.ui.pyui.visible_images import ImageDemand, demanding
 FIVE_TILES = 5  # a centred selection with two neighbours on each side
 SMALL_TILES = 3  # fewer awards than five, or a portrait screen: one neighbour on each side
 _GAP = 16  # at 640x480: around the images and above the details
+_ENTRY = "#"  # separates an image path from its entry in the paths PyUI hands back
 # The selection's share of the width: five tiles, three, and three on a portrait screen
 # (PyUI sizes the images by width; a tall screen has height to spare).
 _SHARE_FIVE, _SHARE_THREE, _SHARE_PORTRAIT = 40, 50, 60
@@ -144,7 +145,9 @@ class _Painter:
     """Draws what the carousel adds to PyUI's: details, image frames, the images it needs.
 
     The view is PyUI's carousel: ``options`` (repeated for short collections),
-    ``options_length`` (the real count), ``selected`` and the visible options.
+    ``options_length`` (the real count), ``selected`` and the visible options. PyUI hands each
+    entry's ``image_path`` back to :meth:`image`, so that path names the entry, not only its
+    image: several awards share a fallback image but have different frames.
 
     Args:
         geometry: The layout.
@@ -153,7 +156,7 @@ class _Painter:
     def __init__(self, geometry: Geometry) -> None:
         self.geometry = geometry
         self._last_selected = -1
-        self._frames: dict[str, Frame | None] = {}
+        self._drawn: dict[str, tuple[str, Frame | None]] = {}  # entry's key: image, frame
         self._fitted: tuple[int, str, str] = (-1, "", "")
 
     def details(self, view: Any) -> None:  # noqa: ANN401 — PyUI view
@@ -183,15 +186,13 @@ class _Painter:
             visible_images.new_window()  # downloads still waiting were for the old neighbours
             self._last_selected = view.selected
         visible, _selected = view.get_visible_options()
-        self._frames = {}
+        self._drawn = {}
         for entry in [*visible, *(view.prev_visible_options or [])]:
             path = entry.get_icon()
-            entry.image_path = entry.image_path_selected = path
-            # Several awards can share a fallback image but have different frames.
-            frame = entry.get_value().frame
-            if path in self._frames and self._frames[path] != frame:
-                frame = None
-            self._frames[path] = frame
+            key = None if path is None else f"{path}{_ENTRY}{id(entry)}"
+            entry.image_path = entry.image_path_selected = key
+            if key is not None:
+                self._drawn[key] = (path, entry.get_value().frame)
         count, reach = len(view.options), view.cols // 2
         with demanding(ImageDemand.NEXT):
             for step in range(reach + 1, reach + view.cols + 1):
@@ -202,7 +203,7 @@ class _Painter:
         """Fit an image above the details, centred at ``x``, and frame its drawn bounds.
 
         Args:
-            path: Image file.
+            path: The entry's key from :meth:`images` (or an image file PyUI found itself).
             x: Its centre.
             width: The room PyUI gives it.
             resize_type: PyUI's resize type.
@@ -211,6 +212,7 @@ class _Painter:
         from display.render_mode import RenderMode
 
         geometry = self.geometry
+        path, frame = self._drawn.get(path, (path, None)) if path is not None else (None, None)
         drawn = Display.render_image(
             path,
             x,
@@ -221,7 +223,6 @@ class _Painter:
             resize_type,
         )
         drawn_width, drawn_height = int(drawn[0]), int(drawn[1])
-        frame = self._frames.get(path) if path is not None else None
         if frame is not None and drawn_width and drawn_height:
             left, top = int(x - drawn_width // 2), geometry.image_y - drawn_height // 2
             image_frames.draw(frame, (left, top, drawn_width, drawn_height))

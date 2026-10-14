@@ -61,7 +61,10 @@ and Menu as separate inputs for its options popups, so either A or M opens them 
 
 **Real badges and icons in fixture mode:** run `uv run python scripts/fetch_dev_media.py` once.
 It mirrors the images the fixtures mention into `dev/media-host`, and the `showcase` drill's
-event and site badges (site art from RA's static host, under `assets/`).
+event and site badges (site art from RA's static host, under `assets/`). CI has no mirror, so
+its screen tests see fallback icons everywhere. A screen test that compares images can pass
+here and fail there (awards sharing a fallback once lost their frames): before pushing one,
+run it once with `dev/media-host` renamed.
 
 **Unlock screenshots in fixture mode** come from `dev/sdcard/Saves/screenshots` if it exists.
 Otherwise the fake card gets a generated stand-in for Final Fantasy Tactics Advance's two unlocks,
