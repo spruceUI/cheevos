@@ -298,11 +298,11 @@ def test_award_dot_follows_its_title(tmp_path):
 
 
 @pytest.mark.parametrize("res", ["640x480", "752x560", "1280x720", "720x720", "480x800"])
-def test_awards_views_keep_the_selection_through_games_popups_and_view_switches(tmp_path, res):
+def test_awards_views_keep_the_selection_through_games_options_and_view_switches(tmp_path, res):
     # Showcase awards, newest first: Descent (a mastered game), then Find the Pixel (an event).
     script = (
         "down,down,down,a,shot:carousel,a,shot:game,b,shot:from_game,"
-        "right,shot:event,a,shot:details,b,shot:from_details,y,shot:options,b,shot:from_options,"
+        "right,shot:event,a,shot:event_a,y,shot:options,b,shot:from_options,"
         "select,shot:grid,select,shot:list,select,shot:carousel_again"
     )
     run_app(tmp_path, script, res=res, simulate="showcase")
@@ -316,8 +316,7 @@ def test_awards_views_keep_the_selection_through_games_popups_and_view_switches(
 
     assert below_clock("game") != below_clock("carousel")
     assert below_clock("from_game") == below_clock("carousel")
-    assert below_clock("details") != below_clock("event")
-    for name in ("from_details", "from_options", "carousel_again"):
+    for name in ("event_a", "from_options", "carousel_again"):  # A on an event does nothing
         assert below_clock(name) == below_clock("event")
     assert len({bytes(b"".join(below_clock(name))) for name in ("event", "grid", "list")}) == 3
 

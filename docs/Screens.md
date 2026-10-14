@@ -124,11 +124,8 @@ Press **Select** to switch between three views; Cheevos remembers your choice:
 
 ![Awards list](images/awards-list.png)
 
-Press **A** on a game to open its achievements, and **B** to come back to the same badge. On an
-event or site badge, **A** shows its full details: title, what it was awarded for, the tier you
-earned and the date.
-
-![Award details](images/award-details.png)
+Press **A** on a game to open its achievements, and **B** to come back to the same badge. Event
+and site badges show everything they have on the screen itself, so **A** does nothing on them.
 
 Press **Y** to choose the view, filter (**All**, **Game Awards**, **Mastered**, **Completed**,
 **Event Awards**, **Site Awards**, each with how many you have) or sort: newest first, the order

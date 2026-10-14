@@ -5,7 +5,7 @@ Cheevos follows the button conventions of Spruce's own menus.
 | Button | What it does |
 |---|---|
 | D-pad | Move. On the profile: scroll. |
-| A | Open or confirm. On an achievement with a screenshot: show it full screen. On an event or site award: its details. |
+| A | Open or confirm. On an achievement with a screenshot: show it full screen. |
 | B | Back. On the home screen: leave Cheevos. |
 | Start | Sync now, or cancel the running sync. Works on every screen. After "API key rejected": enter a new key. |
 | Y / Menu (tap) | Filter and sort (games); view, filter and sort (a game's achievements, awards). |

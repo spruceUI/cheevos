@@ -71,8 +71,8 @@ src/cheevos/
                          bar_layout, glyphs, generated (PNG swatches, button glyphs),
                          award_images (static awards), row_bars, bar_colors, image_frames
                          (shared outlines), badge_grid (compact badge grid), carousel (the
-                         awards carousel), popup (a text panel), texture_budget (bounded PyUI
-                         texture caches), title_bar (a game's top-bar title and award dot)
+                         awards carousel), texture_budget (bounded PyUI texture caches),
+                         title_bar (a game's top-bar title and award dot)
     screens/             home, profile, page (scrolling pages), games, game_detail, achievement,
                          lists (recent unlocks), awards, award_text (how awards read),
                          settings, setup, status (bottom-bar sync status), rows, common

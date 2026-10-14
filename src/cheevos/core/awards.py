@@ -147,14 +147,12 @@ class EventBadge:
         title: The event's title, with the earned tier's label where RA adds one.
         points: Points the earned tier needs, when RA words the award by them; ``None`` when
             it was awarded for completing the event, or nothing is known about it.
-        tier: The earned tier's label (``""`` without one).
         image: Badge path on the media host: the tier the player chose to show.
         known: The event's details were fetched (otherwise only the title and image are RA's).
     """
 
     title: str
     points: int | None
-    tier: str
     image: str
     known: bool
 
@@ -175,20 +173,20 @@ def event_badge(award: Award, info: EventInfo | None) -> EventBadge:
         The badge.
     """
     if info is None:
-        return EventBadge(award.title, None, "", award.image_icon, known=False)
+        return EventBadge(award.title, None, award.image_icon, known=False)
     display = award.display_tier if award.display_tier is not None else award.extra
     shown = info.tier(display)
     image = shown.image if shown is not None and shown.image else award.image_icon or info.image
     title = info.title or award.title
     earned = info.tier(award.extra)
     if earned is None or (info.points is not None and earned.points >= info.points):
-        return EventBadge(title, None, "", image, known=True)
+        return EventBadge(title, None, image, known=True)
     label, game_title = earned.label, award.title or title
     if label != game_title and label.startswith(game_title):
         label = label[len(game_title) :].lstrip(" -:")
     if not title.endswith(label):
         title = f"{title} - {label}"
-    return EventBadge(title, earned.points, label, image, known=True)
+    return EventBadge(title, earned.points, image, known=True)
 
 
 def threshold(award: Award) -> int | None:

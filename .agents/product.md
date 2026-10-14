@@ -154,9 +154,9 @@ The badges of RA's profile galleries (RAWeb `site-award.php`; how they are group
   | Game, completed | Plain | Game title | Completed · date |
   | Old event game | Gold if mastered | Its title | Mastered (Completed) · date |
   | Event, site event | Gold | Event title, plus the earned tier where RA adds it | "Awarded for completing this event" or "Awarded for earning at least N points" · date |
-  | Patreon | Gold; holographic for the $2 tier | Patreon Supporter | RA's thanks · date |
-  | Developer, media | Gold | RA's name for it | Its threshold, e.g. "…earned over 1,000 times!" · date |
-  | Certified Legend, playtest | Gold | Certified Legend / Playtester Award | RA's text / the playtest's name · date |
+  | Patreon | Gold; holographic for the $2 tier | Patreon Supporter | "$2 Patreon supporter", or a thank-you · date |
+  | Developer, media | Gold | RA's name for it | Its threshold, e.g. "Over 1,000 unlocks", "100 approved screenshots" · date |
+  | Certified Legend, playtest | Gold | Certified Legend / Playtester Award | "A Certified RetroAchievements Legend" / the playtest's name · date |
 
   An event's image is the tier the player chose to show (`display_award_tier`); its text is the
   tier actually earned. Before an event's details are fetched (offline first sync, or the v2
@@ -183,11 +183,10 @@ The badges of RA's profile galleries (RAWeb `site-award.php`; how they are group
     the player's arrangement inside each, as on the profile) · Title (as shown) · Console (game
     awards only: offered for All and the game filters; game awards by console first).
 - **A**: a game award opens the game's achievements; back from it, the same view, selection
-  and page. An event or site badge opens a small popup (the theme's popup panel) with the full
-  title, description, earned tier and date; A or B closes it.
-- **Keeping the place**: switching views, closing a popup and a Y menu left unchanged keep the
-  selection; a new filter or sort starts at the top. An empty filter says so and returns to
-  All.
+  and page. Event and site badges (old events' masteries included) do nothing: the screen
+  already shows their title, reason and date, and a details popup only repeated them.
+- **Keeping the place**: switching views and a Y menu left unchanged keep the selection; a new
+  filter or sort starts at the top. An empty filter says so and returns to All.
 
 ## Profile (after RA's own profile page)
 One page, scrolled with the D-pad (up/down: a row, L1/R1: a page; a thin scrollbar on the

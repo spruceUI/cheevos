@@ -2,7 +2,7 @@
 
 Three views of the same awards: a carousel, a compact grid and a list. Select cycles them and
 the choice is remembered (``awards_view``); Y or Menu change the view, filter and sort. A
-opens a game's achievements, or the details of an event or site badge.
+opens a game's achievements; event and site badges have nothing more to show.
 """
 
 from __future__ import annotations
@@ -16,7 +16,6 @@ from cheevos.ui import format as fmt
 from cheevos.ui import strings
 from cheevos.ui.context import AppContext
 from cheevos.ui.pyui.badge_grid import Details
-from cheevos.ui.pyui.popup import show_text
 from cheevos.ui.pyui.primitives import Button
 from cheevos.ui.pyui.views import Layout, MenuItem, PreparedView
 from cheevos.ui.screens.award_text import AwardText, describe
@@ -164,7 +163,11 @@ def _browse(ctx: AppContext, awards: list[Shown]) -> None:
                     selected = 0  # a new filter or sort starts at the top
                 view, prepared = _remember(ctx, changed), None
         else:
-            _open(ctx, *shown[selected])
+            award = shown[selected][0]
+            # Only game awards open: event and site IDs are never game IDs, and old events'
+            # masteries are event badges too.
+            if group(award) is AwardGroup.GAME and award.game_id is not None:
+                show_game(ctx, award.game_id)
 
 
 def _remember(ctx: AppContext, view: _View) -> _View:
@@ -180,21 +183,6 @@ def _remember(ctx: AppContext, view: _View) -> _View:
     if ctx.settings.awards_view != view.layout:
         ctx.update_settings(replace(ctx.settings, awards_view=view.layout))
     return view
-
-
-def _open(ctx: AppContext, award: Award, text: AwardText) -> None:
-    """Open a game's achievements, or show an event or site badge's details.
-
-    Args:
-        ctx: App context.
-        award: The award.
-        text: Its text.
-    """
-    if group(award) is AwardGroup.GAME and award.game_id is not None:
-        show_game(ctx, award.game_id)
-        return
-    # Event and site IDs are never game IDs: these have details instead.
-    show_text(text.title, [text.description, *text.details])
 
 
 def _options(view: _View, awards: Sequence[Award]) -> _View:

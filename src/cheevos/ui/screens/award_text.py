@@ -1,8 +1,7 @@
 """How each award reads and looks, after RA's profile tooltips (.agents/product.md, "Awards").
 
-Every view of the Awards screen (carousel, grid, list) and the details popup use the same
-text: a title, a description (the condition it was awarded for) and the date, plus RA's
-frame around its image.
+Every view of the Awards screen (carousel, grid, list) uses the same text: a title, a
+description (the condition it was awarded for) and the date, plus RA's frame around its image.
 """
 
 from __future__ import annotations
@@ -29,7 +28,6 @@ class AwardText:
         date: When it was earned (kept whole after the description).
         frame: RA's border around its image (``None``: plain).
         image: The image's cache key and its path on RA's hosts (``""``: none).
-        details: Further lines for the details popup (earned tier, date).
     """
 
     title: str
@@ -37,7 +35,6 @@ class AwardText:
     date: str
     frame: Frame | None
     image: tuple[str, str]
-    details: tuple[str, ...] = ()
 
 
 def describe(award: Award, events: Mapping[int, EventInfo]) -> AwardText:
@@ -51,12 +48,11 @@ def describe(award: Award, events: Mapping[int, EventInfo]) -> AwardText:
         Its text.
     """
     date = fmt.local_date(award.awarded_at)
-    earned = (strings.EARNED_ON.format(date=date),) if date else ()
     if award.kind is not None:  # a game's mastery or completion (old events' too)
         mastered = award.kind is AwardKind.MASTERED
         label = strings.AWARD_LABELS[award.kind.value]
         frame = Frame.GOLD if mastered else None
-        return AwardText(award.title, label, date, frame, award_image(award), earned)
+        return AwardText(award.title, label, date, frame, award_image(award))
     if is_event(award):
         info = events.get(award.data)
         badge = event_badge(award, info)
@@ -65,19 +61,14 @@ def describe(award: Award, events: Mapping[int, EventInfo]) -> AwardText:
             text = template.format(points=fmt.number(badge.points))
         else:
             text = strings.EVENT_COMPLETED if badge.known else strings.EVENT_AWARD
-        tier = (strings.EARNED_TIER.format(tier=badge.tier),) if badge.tier else ()
-        image = award_image(award, info)
-        return AwardText(badge.title, text, date, Frame.GOLD, image, (*tier, *earned))
+        return AwardText(badge.title, text, date, Frame.GOLD, award_image(award, info))
     title, text = _site_text(award)
-    if award.type is AwardType.PATREON:
-        since = (strings.PATREON_SINCE.format(date=date),) if date else ()
-        frame = Frame.HOLO if award.extra == _PATREON_TIER else Frame.GOLD
-        return AwardText(title, text, date, frame, award_image(award), since)
-    return AwardText(title, text, date, Frame.GOLD, award_image(award), earned)
+    holo = award.type is AwardType.PATREON and award.extra == _PATREON_TIER
+    return AwardText(title, text, date, Frame.HOLO if holo else Frame.GOLD, award_image(award))
 
 
 def _site_text(award: Award) -> tuple[str, str]:
-    """Return a site award's title and description, as RA's tooltip words them.
+    """Return a site award's title and description: RA's title, and the reason in short.
 
     Args:
         award: A site award (not an event's).

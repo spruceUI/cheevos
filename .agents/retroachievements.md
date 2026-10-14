@@ -127,7 +127,8 @@ the profile shows; `core/awards.py` mirrors it:
   RA's thresholds by tier, `PlayerBadge` in RAWeb), media contributions (`mediaContrib-<shown
   tier>`, the threshold of the earned tier), Patreon (`holoimage`, a 135° gold-orange-pink-
   violet-cyan-gold border, for the $2 tier, AwardDataExtra 2; gold otherwise) and Certified
-  Legend. Wording: RA's tooltips (`strings.py`).
+  Legend. Wording: RA's titles; its tooltips' reasons are shortened to the threshold, which
+  they put last, so the line fits beside the date (`strings.py`).
 - **Never shown**: "Game Beaten" (the renderer has no branch for it) and unknown types.
 - **Order**: each gallery keeps the list's order; galleries follow each other in the order of
   their first visible award.

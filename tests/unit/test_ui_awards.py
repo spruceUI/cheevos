@@ -128,7 +128,7 @@ def test_event_awards_read_like_ras_tooltips():
     assert tiered.description == "Awarded for earning at least 12 points"
     assert tiered.frame is Frame.GOLD
     assert tiered.image == ("award/Images/b", "/Images/b.png")
-    assert tiered.details == ("Earned tier: Bronze", f"Earned {fmt.local_date(90 * DAY)}")
+    assert tiered.date == fmt.local_date(90 * DAY)
     champion = text(award(T.EVENT, 196, 4, title="Achievement of the Week 2026"))
     assert (champion.title, champion.description) == (
         "Achievement of the Week 2026",
@@ -148,27 +148,27 @@ def test_event_awards_read_like_ras_tooltips():
         (
             award(T.PATREON, 0, 2),
             "Patreon Supporter",
-            "$2 Patreon supporter. Thank you so much for your support!",
+            "$2 Patreon supporter",
             Frame.HOLO,
         ),
         (award(T.PATREON, 0, 1), "Patreon Supporter", strings.PATREON_TEXT, Frame.GOLD),
         (
             award(T.UNLOCKS_YIELD, 3),
             "Achievements Earned by Others",
-            strings.UNLOCKS_YIELD_TEXT.format(count="1,000"),
+            "Over 1,000 unlocks",
             Frame.GOLD,
         ),
         (
             award(T.POINTS_YIELD, 0),
             "Achievement Points Earned by Others",
-            strings.POINTS_YIELD_TEXT.format(count="1,000"),
+            "Over 1,000 points",
             Frame.GOLD,
         ),
         (award(T.UNLOCKS_YIELD, 99), strings.UNLOCKS_YIELD, strings.DEVELOPER_TEXT, Frame.GOLD),
         (
             award(T.MEDIA, 0, 2),
             "Media Contribution",
-            "Awarded for contributing 100 approved screenshots to game galleries.",
+            "100 approved screenshots",
             Frame.GOLD,
         ),
         (award(T.LEGEND, 0), "Certified Legend", strings.LEGEND_TEXT, Frame.GOLD),
@@ -183,13 +183,6 @@ def test_event_awards_read_like_ras_tooltips():
 def test_site_awards_read_like_the_profile(made, title, description, frame):
     described = text(made)
     assert (described.title, described.description, described.frame) == (title, description, frame)
-
-
-def test_patreon_details_say_since_when():
-    assert text(award(T.PATREON, 0, 2, at=70 * DAY)).details == (
-        f"Supporting RA since {fmt.local_date(70 * DAY)}",
-    )
-    assert text(award(T.PATREON, 0, 2, at=None)).details == ()
 
 
 def test_items_resolve_their_image_lazily_with_a_fallback():
@@ -277,33 +270,30 @@ class FakeView:
         return Choice(self.items[index], index, button)
 
 
-def browse(monkeypatch, presses, *, view="carousel", options=None):
+def browse(monkeypatch, presses, *, view="carousel", options=None, awards=AWARDS):
     FakeView.built, FakeView.presses = [], iter(presses)
     monkeypatch.setattr(screen, "PreparedView", FakeView)
     monkeypatch.setattr(screen, "_options", options or (lambda current, _awards: current))
-    games, popups = [], []
+    games = []
     monkeypatch.setattr(screen, "show_game", lambda _ctx, game_id: games.append(game_id))
-    monkeypatch.setattr(screen, "show_text", lambda title, lines: popups.append((title, lines)))
     ctx = SimpleNamespace(
         settings=Settings(awards_view=view),
-        data=SimpleNamespace(awards=lambda **_kw: (None, AWARDS), events=lambda: EVENTS),
+        data=SimpleNamespace(awards=lambda **_kw: (None, awards), events=lambda: EVENTS),
         media=SimpleNamespace(resolve=lambda *_args: "x.png"),
     )
     ctx.update_settings = lambda settings: setattr(ctx, "settings", settings)
     screen.show_awards(cast(AppContext, ctx))
-    return ctx, games, popups
+    return ctx, games
 
 
-def test_a_opens_games_and_details_without_mixing_up_ids(monkeypatch):
-    # Newest first: the AotW event (ID 196) first, Banjo (game 196) third.
-    _ctx, games, popups = browse(monkeypatch, [(Button.A, 0), (Button.A, 2), (Button.A, 1)])
+def test_only_game_awards_open_without_mixing_up_ids(monkeypatch):
+    # Newest first: the AotW event (ID 196), Patreon, then Banjo (game 196).
+    _ctx, games = browse(monkeypatch, [(Button.A, 0), (Button.A, 1), (Button.A, 2)])
     assert games == [196]
-    assert [title for title, _lines in popups] == [
-        "Achievement of the Week 2026 - Bronze",
-        "Patreon Supporter",
-    ]
-    assert popups[0][1][0] == "Awarded for earning at least 12 points"
-    assert len(FakeView.built) == 1  # back from a game or a popup: the same view and page
+    assert len(FakeView.built) == 1  # back from a game: the same view and page
+    legacy = award(T.MASTERY, 9, 1, title="AotW 2017", console="Events")
+    _ctx, games = browse(monkeypatch, [(Button.A, 0)], awards=[legacy])
+    assert games == []  # an old event's mastery is an event badge, though its ID is a game's
 
 
 @pytest.mark.parametrize(
@@ -316,7 +306,7 @@ def test_awards_open_in_the_saved_view(monkeypatch, saved, layout):
 
 
 def test_select_cycles_views_keeping_the_selection_and_remembers_it(monkeypatch):
-    ctx, _games, _popups = browse(monkeypatch, [(Button.SELECT, 3), (Button.SELECT, 3)])
+    ctx, _games = browse(monkeypatch, [(Button.SELECT, 3), (Button.SELECT, 3)])
     assert [view.layout for view in FakeView.built] == [Layout.CAROUSEL, Layout.BADGES, Layout.LIST]
     assert [view.initial for view in FakeView.built] == [0, 3, 3]
     assert ctx.settings.awards_view == "list"
@@ -335,8 +325,8 @@ def test_new_filter_starts_at_the_top_and_unchanged_options_keep_the_page(monkey
         return current
 
     presses = [(Button.Y, 4), (Button.MENU, 4), (Button.Y, 1)]
-    ctx, _games, _popups = browse(monkeypatch, presses, view="list", options=options)
-    assert len(FakeView.built) == 3  # the unchanged popup kept the first view
+    ctx, _games = browse(monkeypatch, presses, view="list", options=options)
+    assert len(FakeView.built) == 3  # the unchanged options kept the first view
     assert [view.initial for view in FakeView.built] == [0, 0, 1]  # a new view keeps it
     assert [len(view.items) for view in FakeView.built] == [6, 2, 2]
     assert ctx.settings.awards_view == "grid"

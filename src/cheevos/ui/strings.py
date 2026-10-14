@@ -187,34 +187,26 @@ AWARD_SORTS = {
     "console": "Console",
 }
 AWARD_VIEWS = {"carousel": "Carousel", "grid": "Grid", "list": "List"}
-# How awards read, after RA's profile tooltips (.agents/product.md, "Awards").
+# How awards read (.agents/product.md, "Awards"): events as RA's profile tooltips word them; site
+# awards shorter than RA's, threshold first, so the line fits beside the date in every view.
 EVENT_COMPLETED = "Awarded for completing this event"
 EVENT_POINT = "Awarded for earning at least 1 point"
 EVENT_POINTS = "Awarded for earning at least {points} points"
 EVENT_AWARD = "Event award"
-EARNED_TIER = "Earned tier: {tier}"
-EARNED_ON = "Earned {date}"
 PLAYTEST = "Playtester Award"
 UNLOCKS_YIELD = "Achievements Earned by Others"
-UNLOCKS_YIELD_TEXT = (
-    "Awarded for being a hard-working developer and producing achievements that have been "
-    "earned over {count} times!"
-)
+UNLOCKS_YIELD_TEXT = "Over {count} unlocks"
 POINTS_YIELD = "Achievement Points Earned by Others"
-POINTS_YIELD_TEXT = (
-    "Awarded for producing many valuable achievements, providing over {count} points to the "
-    "community!"
-)
-DEVELOPER_TEXT = "Awarded for achievements made for the community"
+POINTS_YIELD_TEXT = "Over {count} points"
+DEVELOPER_TEXT = "For making achievements"
 PATREON = "Patreon Supporter"
-PATREON_TEXT = "Thank you so much for your support!"
-PATREON_TIER_TEXT = "$2 Patreon supporter. Thank you so much for your support!"
-PATREON_SINCE = "Supporting RA since {date}"
+PATREON_TEXT = "Thank you for your support!"
+PATREON_TIER_TEXT = "$2 Patreon supporter"
 MEDIA = "Media Contribution"
-MEDIA_TEXT = "Awarded for contributing {count} approved screenshots to game galleries."
-MEDIA_ANY_TEXT = "Awarded for contributing approved screenshots to game galleries."
+MEDIA_TEXT = "{count} approved screenshots"
+MEDIA_ANY_TEXT = "Approved screenshots"
 LEGEND = "Certified Legend"
-LEGEND_TEXT = "Specially Awarded to a Certified RetroAchievements Legend"
+LEGEND_TEXT = "A Certified RetroAchievements Legend"
 PROXY = "RAOfflineProxy"
 PROXY_OFF = "Off · unlocks need Wi-Fi"
 PROXY_DISABLED = (

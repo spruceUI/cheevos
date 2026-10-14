@@ -120,7 +120,7 @@ def aotw(extra, tier=None):
 
 def test_event_tier_reads_like_ras_tooltip():
     assert event_badge(aotw(2), AOTW) == EventBadge(
-        "Achievement of the Week 2026 - Silver", 30, "Silver", "/Images/122639.png", known=True
+        "Achievement of the Week 2026 - Silver", 30, "/Images/122639.png", known=True
     )
 
 
@@ -133,7 +133,7 @@ def test_event_image_follows_the_shown_tier_but_text_the_earned_one():
 def test_a_tier_worth_the_whole_event_was_for_completing_it():
     badge = event_badge(aotw(4), AOTW)
     assert badge == EventBadge(
-        "Achievement of the Week 2026", None, "", "/Images/122641.png", known=True
+        "Achievement of the Week 2026", None, "/Images/122641.png", known=True
     )
 
 
@@ -146,11 +146,11 @@ def test_event_without_tiers_and_unknown_events():
     plain = award(T.EVENT, 221, 0, title="Find the Pixel", image="/Images/144515.png")
     info = EventInfo(221, "Find the Pixel", "/Images/144515.png")
     assert event_badge(plain, info) == EventBadge(
-        "Find the Pixel", None, "", "/Images/144515.png", known=True
+        "Find the Pixel", None, "/Images/144515.png", known=True
     )
     # Not fetched yet (or offline): RA's own title and image, and nothing invented.
     assert event_badge(aotw(2), None) == EventBadge(
-        "Achievement of the Week 2026", None, "", "/Images/122637.png", known=False
+        "Achievement of the Week 2026", None, "/Images/122637.png", known=False
     )
     # A tier the API doesn't list (a legacy tier number) isn't a hardcore flag either.
     assert event_badge(aotw(3), AOTW).points is None

@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from cheevos.ui.pyui import carousel, image_frames, popup, visible_images
+from cheevos.ui.pyui import carousel, image_frames, visible_images
 from cheevos.ui.pyui.carousel import FIVE_TILES, SMALL_TILES, _Painter, columns, layout
 from cheevos.ui.pyui.image_frames import Frame
 from cheevos.ui.pyui.primitives import Text
@@ -149,21 +149,3 @@ def test_details_are_fitted_once_per_selection(monkeypatch):
     view.selected = 1
     drawn.details(view)
     assert fitted[-2:] == ["Other", ""]
-
-
-def test_popup_wraps_and_cuts_what_does_not_fit(monkeypatch):
-    monkeypatch.setattr(popup, "wrap", lambda value, _role, _width: value.split("/"))
-    monkeypatch.setattr(popup, "line_height", lambda role: 30 if role is Text.TITLE else 20)
-    monkeypatch.setattr(popup, "text_width", lambda value, _role: 10 * len(value))
-    monkeypatch.setattr(popup, "displayable", lambda value, _role: value)
-    rows = popup.layout("Achievement of/the Week", ["Awarded for/earning", "", "Earned"], 90, 90)
-    assert rows == [
-        ("Achievement of", Text.TITLE),
-        ("the Week", Text.TITLE),
-        ("Awarded…", Text.BODY),  # the rest doesn't fit: an ellipsis, within the width
-    ]
-    assert popup.layout("Title", ["One", "Two"], 200, 200) == [
-        ("Title", Text.TITLE),
-        ("One", Text.BODY),
-        ("Two", Text.BODY),
-    ]

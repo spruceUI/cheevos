@@ -131,11 +131,6 @@ of PyUI's views, without patching PyUI.
   - five tiles (centre 40% of the width, shrinking further away), three for fewer than five
     awards (50%) or on a portrait screen (60%: PyUI sizes images by width, and a tall screen
     has height to spare). Images are scaled linearly, as PyUI does (the approved design).
-- **Text popup** (`popup.py`, an award's details): drawn where the theme puts its popup menu,
-  on its panel image (`menu_popup_bg_large`), over the frozen current frame
-  (`lock_current_image`, then `unlock_current_image` when it closes, as PyUI's popup does).
-  Text is wrapped to the panel; what doesn't fit ends with an ellipsis. The bottom bar's
-  status isn't redrawn under it, as under every popup.
 - **Grid tiles cache their image path:** `GridOrListEntry` drops its searchers after one call.
   `visible_images.VisibleImages` re-arms the visible tiles' searchers when `MediaResolver.version` changes,
   so lazily downloaded icons appear. List rows use `icon_searcher`, which PyUI calls every frame.
