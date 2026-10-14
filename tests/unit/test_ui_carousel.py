@@ -101,7 +101,7 @@ def test_frames_follow_each_drawn_award(monkeypatch):
     monkeypatch.setitem(sys.modules, "display.display", SimpleNamespace(Display=display))
     render_mode = SimpleNamespace(RenderMode=SimpleNamespace(MIDDLE_CENTER_ALIGNED="centre"))
     monkeypatch.setitem(sys.modules, "display.render_mode", render_mode)
-    monkeypatch.setattr(image_frames, "draw", lambda *args: outlines.append(args))
+    monkeypatch.setattr(image_frames, "fill", lambda *args: outlines.append(args))
     entries = [
         entry("Gold", frame=Frame.GOLD),
         entry("Plain"),

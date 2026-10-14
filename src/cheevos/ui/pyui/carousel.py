@@ -225,7 +225,7 @@ class _Painter:
         drawn_width, drawn_height = int(drawn[0]), int(drawn[1])
         if frame is not None and drawn_width and drawn_height:
             left, top = int(x - drawn_width // 2), geometry.image_y - drawn_height // 2
-            image_frames.draw(frame, (left, top, drawn_width, drawn_height))
+            image_frames.fill(frame, (left, top, drawn_width, drawn_height))
 
 
 @functools.cache

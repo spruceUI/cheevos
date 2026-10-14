@@ -144,14 +144,23 @@ of PyUI's views, without patching PyUI.
 - **Badge outlines** (`image_frames.py`): hardcore achievements have a gold border; casual,
   pending and locked ones stay plain. Mastered games, events and most site badges use the same
   gold border; completed games stay plain; the $2 Patreon badge gets `Frame.HOLO`, as wide as
-  gold, painted pixel by pixel with RA's 135° `holoimage` gradient. A transparent PNG frame surrounds the fitted image, with a 1 px black
+  gold, painted with RA's 135° `holoimage` gradient. A transparent PNG frame surrounds the fitted image, with a 1 px black
   outer edge so gold stays gold and readable on bright themes. Thickness scales with the
   image, at least 2 px. Generate once per style and rendered size in the RAM scratch, shared
   across badges: one texture draw per border, with no per-badge image copies. PyUI's bounded
-  texture cache includes these assets. Lists wrap `_render` before the list presents and
-  mirror the icon column and row geometry; only visible framed icons are measured, in a
-  bounded cache. Cache the fitted rectangles until the visible window, options identity or
-  media revision changes, so scrolling, on-tick updates and lazy downloads stay correct.
+  texture cache includes these assets. Only the bands' pixels are computed (the gradient is
+  pure Python, about 55× slower on a Mini+ than on a Mac).
+  - **The carousel fills rectangles instead** (`fill()`, `Display.render_box`): its slides
+    draw every tile at a new size in each frame, and a PNG per size stalled. Measured on a
+    Mini+ with 1,877 awards (2026-10-14): PNG frames took 609 ms for the first move (16 gold
+    PNGs, 3–52 ms each) and, for holographic frames, 2.3 s per 224 px PNG: 3.8 s to open
+    Awards and an 11.9 s freeze on the first move. Fills: 335 ms for the first move, 314–348
+    ms after (warm PNGs: 296–349 ms); every award holographic, as a stress test, ~600 ms a
+    move (about 60 fills per holographic tile). Opening Awards: 1.0–1.1 s.
+  - Lists wrap `_render` before the list presents and mirror the icon column and row
+    geometry; only visible framed icons are measured, in a bounded cache. Cache the fitted
+    rectangles until the visible window, options identity or media revision changes, so
+    scrolling, on-tick updates and lazy downloads stay correct.
 - **Row bars:** progress bars in list rows wrap one view's `_render` (`row_bars.py`) and
   replicate `DescriptiveListView._render`'s geometry (icon column = 1/8 of the selected-row
   background, description at `text_offset_y + title height`). An item with `progress` gets an

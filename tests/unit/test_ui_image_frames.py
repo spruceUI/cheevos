@@ -117,6 +117,50 @@ def test_holo_frame_runs_ras_gradient_from_top_left_to_bottom_right(images):
     assert pixel(1, 1) != pixel(width - 2, 1)  # the colours run across the frame
 
 
+def opaque_pixels(asset):
+    width, height, rgba = asset
+    return {
+        (px, py): tuple(rgba[(py * width + px) * 4 : (py * width + px) * 4 + 3])
+        for py in range(height)
+        for px in range(width)
+        if rgba[(py * width + px) * 4 + 3] == 255
+    }
+
+
+@pytest.mark.parametrize("frame", list(Frame))
+@pytest.mark.parametrize("size", [(64, 64), (101, 77), (224, 224)])
+def test_filled_frames_paint_the_drawn_frames_pixels(images, frame, size):
+    _drawn, assets = images
+    width, height = size
+    image_frames.draw(frame, (0, 0, width, height))
+    (png,) = assets.values()
+    expected = opaque_pixels(png)
+    pad = image_frames.padding(frame, width, height)
+    painted = {}
+    for color, (x, y, rect_width, rect_height) in image_frames.strips(frame, (0, 0, width, height)):
+        for py in range(y + pad, y + pad + rect_height):
+            for px in range(x + pad, x + pad + rect_width):
+                assert (px, py) not in painted  # every pixel is filled once
+                painted[px, py] = color
+    assert painted.keys() == expected.keys()  # the same band, nothing over the artwork
+    for at, color in painted.items():
+        # Solid bands match exactly; the holographic one in steps, close to each pixel's colour.
+        tolerance = 0 if frame is not Frame.HOLO or color == BLACK else 40
+        assert max(abs(a - b) for a, b in zip(color, expected[at], strict=True)) <= tolerance
+
+
+def test_filled_holo_band_steps_through_the_gradient():
+    def colours(size):
+        rects = image_frames.strips(Frame.HOLO, (10, 10, size, size))
+        return [color for color, _rect in rects if color != BLACK]
+
+    assert len(colours(48)) == 4 * 12  # at least a dozen per side
+    # The band around 224 px is 238 px across, 224 px down between the top and bottom.
+    assert len(colours(224)) == 2 * 15 + 2 * 14  # one per 16 px
+    assert len(colours(1000)) == 4 * 32  # however large it gets
+    assert len(set(colours(224))) > 40
+
+
 def test_holo_gradient_follows_ras_stops():
     assert image_frames.holo_color(0) == (255, 215, 0)  # gold
     assert image_frames.holo_color(0.4) == (255, 106, 213)  # pink, the third of six stops

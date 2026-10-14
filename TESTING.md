@@ -249,7 +249,7 @@ the command line, recorded fixtures or the live API, and the drills.
 ## What the desktop can't show
 - The Mini's custom `mmiyoo` SDL driver: for example, it ignores blending for filled rectangles
   (see `.agents/pyui.md`), double buffering, evdev input.
-- Real speed: a Cortex-A7 at 1.2 GHz, 128 MB RAM, slow SD writes. Big lists and image-heavy
-  screens need a check on hardware.
+- Real speed: a dual-core Cortex-A7 at 1.2 GHz, 128 MB RAM, slow SD writes. Big lists and
+  image-heavy screens need a check on hardware.
 - FAT32 on the SD card (32 KB clusters, `dirsync`), the real RAOfflineProxy, Wi-Fi, and a clock
   that reads 1970 until it syncs.
