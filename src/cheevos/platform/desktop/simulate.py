@@ -27,16 +27,9 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from cheevos.core.clock import ServerClock
+from cheevos.core.ra_client.common import API_V2_HOST, MEDIA_HOST, STATIC_HOST, Response
 from cheevos.core.ra_client.parse import parse_time
-from cheevos.core.ra_client.transport import (
-    API_V2_HOST,
-    MEDIA_HOST,
-    STATIC_HOST,
-    FixtureTransport,
-    HttpTransport,
-    Response,
-    Transport,
-)
+from cheevos.core.ra_client.transport import FixtureTransport, HttpTransport, Transport
 from cheevos.platform.desktop.clock_drill import ClockRecoveryTransport
 from cheevos.platform.desktop.no_set_drill import NoSetTransport
 from cheevos.platform.desktop.showcase_awards import award_rows, v2_body

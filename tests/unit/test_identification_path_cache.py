@@ -37,6 +37,7 @@ def test_matches_are_saved_and_read_back(file):
     PathCache(file, now=Clock()).remember(ROM, Identification.matched(1479))
 
     assert PathCache(file, now=Clock()).lookup(ROM) == Identification.matched(1479)
+    # Spruce reads matches in exactly this shape: change it only under a new version.
     saved = json.loads(file.read_text(encoding="utf-8"))
     assert saved == {
         "version": 2,

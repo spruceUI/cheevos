@@ -276,7 +276,8 @@ time /mnt/SDCARD/App/Cheevos/identify-rom.sh --path "<the same ROM, now saved>" 
 ```
 
 Without `--work-dir`, a ZIP is extracted under `Saves/cheevos/cache/identify-work/`; the
-helper's log lines go to `Saves/spruce/cheevos-<platform>.log`. The full device check before a
+helper's log lines go to `Saves/spruce/cheevos-<platform>.log`. A lookup that asks RA logs the
+curl it uses (`Asking RA with /mnt/SDCARD/spruce/bin/curl`), or `No curl on PATH`. The full device check before a
 proxy bump or release: a ROM Spruce already knows (no helper), a saved path, an unknown
 supported ROM, an unsupported ROM (`no_match`), Wi-Fi off with the proxy's cache warm and cold,
 a single-ROM ZIP, and B while checking. Then replace the proxy (Spruce update or its updater):

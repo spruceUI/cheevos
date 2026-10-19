@@ -1,11 +1,13 @@
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
 import zipfile
 from pathlib import Path
 
+import fake_curl
 import fake_proxy
 import pytest
 
@@ -13,7 +15,9 @@ from cheevos.core.identification.candidates import HashResult
 from cheevos.core.identification.identify import Sources, identify_rom
 from cheevos.core.identification.path_cache import PathCache
 from cheevos.core.identification.result import Identification, IdentificationError
+from cheevos.core.ra_client.transport import HttpTransport
 from cheevos.platform import identify_rom as helper
+from cheevos.platform.curl_transport import CurlTransport
 from cheevos.platform.paths import Paths
 
 SRC = Path(__file__).resolve().parents[2] / "src"
@@ -303,6 +307,8 @@ def test_saved_association_loads_no_hashing_storage_or_network_code(tmp_path):
         "cheevos.core.identification.candidates",
         "cheevos.core.identification.hash_lookup",
         "cheevos.core.ra_client.transport",
+        "cheevos.platform.curl_transport",
+        "subprocess",
     }
     assert sorted((NEVER | lazy) & loaded) == []
     assert not any(name.startswith(("cheevos.ui", "raofflineproxy")) for name in loaded)
@@ -335,6 +341,38 @@ def test_unknown_rom_matched_from_the_proxy_cache_leaves_the_proxy_untouched(tmp
     saved = json.loads(Paths(sdcard=tmp_path).rom_identifications_file.read_text())
     assert saved["entries"][str(game)] == {"result": {"status": "matched", "game_id": 1479}}
     assert list(Paths(sdcard=tmp_path).identify_work_dir.iterdir()) == []
+
+
+def test_an_unknown_hash_is_asked_of_ra_through_curl_without_loading_tls(tmp_path):
+    fake_proxy.install(tmp_path)
+    game = tmp_path / "Roms" / "GBA" / "game.gba"
+    game.parent.mkdir(parents=True)
+    game.write_bytes(b"cartridge")
+    (tmp_path / "bin").mkdir()
+    curl = fake_curl.Curl(tmp_path / "bin")
+    curl.plan(fake_curl.answer('{"Success":true,"GameID":1479}'))
+
+    process = run_helper(
+        tmp_path, game, env={"PATH": f"{curl.directory}{os.pathsep}{os.environ['PATH']}"}
+    )
+
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == {"status": "matched", "game_id": 1479}
+    gameid = f"/dorequest.php?r=gameid&m={fake_proxy.md5(b'cartridge')}"
+    assert curl.urls == [f"https://retroachievements.org{gameid}"]
+    loaded = loaded_modules(process)
+    assert sorted(NEVER & loaded) == []
+    assert sorted({"ssl", "http.client", "cheevos.core.ra_client.transport"} & loaded) == []
+
+
+def test_ra_is_asked_through_the_curl_on_path(monkeypatch):
+    monkeypatch.setattr(shutil, "which", lambda name: f"/mnt/SDCARD/spruce/bin/{name}")
+    assert isinstance(helper.ra_transport(), CurlTransport)
+
+
+def test_without_curl_ra_is_asked_through_python(monkeypatch):
+    monkeypatch.setattr(shutil, "which", lambda _name: None)
+    assert isinstance(helper.ra_transport(), HttpTransport)
 
 
 def test_import_failure_in_the_installed_proxy_is_a_structured_error(tmp_path):

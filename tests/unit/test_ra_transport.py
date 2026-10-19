@@ -6,15 +6,8 @@ import pytest
 
 from cheevos.core.clock import ServerClock
 from cheevos.core.errors import NetworkError
-from cheevos.core.ra_client.transport import (
-    API_HOST,
-    API_V2_HOST,
-    MEDIA_HOST,
-    STATIC_HOST,
-    FixtureTransport,
-    HttpTransport,
-    default_ssl_context,
-)
+from cheevos.core.ra_client.common import API_HOST, API_V2_HOST, MEDIA_HOST, STATIC_HOST
+from cheevos.core.ra_client.transport import FixtureTransport, HttpTransport, default_ssl_context
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "ra"
 

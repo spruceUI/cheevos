@@ -51,7 +51,8 @@ src/cheevos/
     errors.py            CheevosError and its subclasses
     storage/             db.py (open/recreate), schema.py (DDL, version, row mapping),
                          data_cache.py, award_store.py (awards and events), media_cache.py
-    ra_client/           transport.py (HTTPS with HTTP fallback, fixtures), client.py, parse.py,
+    ra_client/           common.py (RA's hosts, User-Agent, Response; no http.client or ssl),
+                         transport.py (HTTPS with HTTP fallback, fixtures), client.py, parse.py,
                          parse_awards.py (awards, v2 events), v2.py (v2 JSON:API requests),
                          redact.py (key redaction in logs); the package imports nothing itself
     sync/                engine.py, planner.py (what to fetch), events.py (event details),
@@ -88,6 +89,8 @@ src/cheevos/
     paths.py             every path, from CHEEVOS_SDCARD_ROOT (default /mnt/SDCARD)
     arguments.py         the --game-id argument shared by the launcher and desktop runner
     identify_rom.py      the identification helper's entry point (identify-rom.sh runs it)
+    curl_transport.py    the helper's RA requests through Spruce's curl, Python's HTTPS as
+                         the fallback
     proxy_hasher.py      adapter over RAOfflineProxy's rom_hashing wrapper (its only import
                          from the proxy)
     desktop/             dev only: runner CLI on PyUI's DESKTOP device, fixture/live

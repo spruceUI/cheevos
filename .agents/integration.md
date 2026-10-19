@@ -58,7 +58,7 @@ the helper's saved paths, could close that gap.
 
 ## Direct launch from Spruce (`core/identification/`, `platform/identify_rom.py`)
 Spruce's game popup ("View achievement progress") resolves the selected ROM, then launches
-`Cheevos/launch.sh --game-id N`. Spruce owns the menu, its first fast path, cancellation,
+`Cheevos/launch.sh --game-id N`. Spruce owns the menu, its fast paths, cancellation,
 messages and the launch. Cheevos owns the rest, in a headless helper process.
 
 **Why a Cheevos helper, not a proxy command:** the first version (SpruceOS #1885) added an
@@ -73,7 +73,16 @@ wrapper, from its own process.
    with no subprocess, ROM checks or cache access. A known association remains valid for
    viewing progress after a ROM is patched or replaced at the same path; this feature doesn't
    validate compatibility for submitting unlocks.
-2. **The helper.** Otherwise Spruce runs
+2. **Saved matches.** Spruce then reads the helper's `rom-identifications.json` (below) itself,
+   with no subprocess. It accepts version 1 or 2, at most 256 KB, and only an entry under the
+   ROM's absolute path whose `result` is `{"status":"matched","game_id":N}`, with N a positive
+   integer of at most 1,000,000,000. Misses, virtual IDs, unknown versions and malformed files
+   go to the helper. The read takes under 1 ms on a Mini+ (11 ms for a 256 KB file). Starting
+   the helper costs 0.6 s from a shell, and 0.9-2.4 s from PyUI (2026-10-18).
+   **This makes a match's shape a contract with Spruce.** Only Cheevos writes the file. Change
+   that shape only under a new version number, which Spruce then ignores: slower, never wrong.
+   `test_matches_are_saved_and_read_back` pins the shape.
+3. **The helper.** Otherwise Spruce runs
    `App/Cheevos/identify-rom.sh --path <absolute ROM path> --work-dir <scratch> --json` in a new
    session, polling for B with a 60 s timeout. Cancelling or timing out sends SIGTERM to the
    process group, then SIGKILL after 2 s. Spruce creates the scratch directory under
@@ -83,7 +92,7 @@ wrapper, from its own process.
    and `exec`s `$SPRUCE_PYTHON -m cheevos.platform.identify_rom`. It never goes through
    `launch.sh` or `cheevos.__main__`, which start the UI. It adds no library path:
    `rom_hashing` finds `lib/<arch>/libraproxy_rchash.so` itself (it needs only libc).
-3. **The result contract.** One JSON object on stdout; diagnostics go to the app log:
+4. **The result contract.** One JSON object on stdout; diagnostics go to the app log:
    `{"status":"matched","game_id":1479}`, `{"status":"no_match"}` or
    `{"status":"error","reason":"offline"}`. Exit status 0 for a match or a miss, 1 for an error.
    Reasons: `auth`, `offline` (RA unreachable), `network` (5xx or an unexpected status),
@@ -92,7 +101,7 @@ wrapper, from its own process.
    `timeout` and the `cancelled` status. Spruce treats malformed output or a crash as a failed
    lookup, keeps a structured error whatever the exit status, and accepts positive integer game
    IDs only (no booleans, no upper bound).
-4. **Availability.** Spruce offers the action when Cheevos's `config.json` has
+5. **Availability.** Spruce offers the action when Cheevos's `config.json` has
    `"gameProgress": 2` or more (1: `--game-id` launches; 2: also ships `identify-rom.sh`) and
    both scripts exist. A missing or broken proxy shows the `dependency` message instead.
 
@@ -126,6 +135,21 @@ wrapper, from its own process.
   401/403 are `auth` (403 `unsupported_client` is `response`), 429 `rate_limited`, anything
   malformed `response`. RA's answers are kept only in our path cache, never written to the
   proxy. Requests are spaced 0.3 s apart, like the proxy's.
+- **RA through Spruce's curl** (`platform/curl_transport.py`). Spruce makes its own HTTPS
+  requests with the static curl it ships (`spruce/bin` or `spruce/bin64`; `helperFunctions.sh`:
+  "curl is present and working on every platform we ship"). `appEnv.sh` loads the platform's
+  `.cfg`, which puts that curl on `PATH`; the proxy, a long-running service, uses Python's
+  `urllib` instead. A helper run is a new process each time, and asking RA through Python
+  first imports `ssl` and `http.client` (0.45 s on a Mini) and resolves RA's address through
+  the C library. With curl, the RA step took 0.6-1.3 s instead of 1.8-2.1 s (`device.md`).
+  The request matches `HttpTransport` where it matters: `--disable` (no `~/.curlrc`),
+  `--cacert $SSL_CERT_FILE`, `--noproxy '*'`, `--max-time 15`, no redirects and never `-k`.
+  Status and Date come from `--write-out` (curl 7.84+; Spruce ships 8.8 and 8.10), and the
+  Date sets the app clock. Exit codes: Spruce's TLS set (35, 51, 58, 59, 60, 77) retries over
+  HTTP on RA's hosts, as `HttpTransport` does; no answer (resolve, connect, timeout, reset) is
+  `offline`. Anything else falls back to Python's HTTPS for the rest of the run: curl missing,
+  not executable or for another architecture, an unexpected exit or unreadable output. Curl
+  on `PATH` isn't part of `appEnv.sh`'s `SPRUCE_*` contract, so that fallback stays.
 - **Virtual game IDs:** for a hash RA hasn't marked compatible, `r=gameid` (and so the
   proxy's cache) answers the game's ID plus 1,000,000,000 (incompatible), 1,100,000,000
   (untested) or 1,200,000,000 (patch required), after RAWeb's `VirtualGameIdService`.

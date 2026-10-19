@@ -158,7 +158,20 @@ factory and game-menu fixes have not yet been timed on a device.
   dominates). Helper RSS 8.5 MB for a saved path, at most 15 MB with TLS; MemAvailable stayed at
   13 MB or more with PyUI, the proxy service and the helper resident. In the game menu, Spruce
   shows "Checking RetroAchievements..." for that time, then hands over to Cheevos (3 s more to
-  its first frame).
+  its first frame). Started from PyUI, the same saved path took 0.9-2.4 s from the A press to
+  the answer, so Spruce now reads saved matches itself ([integration.md](integration.md)).
+- **An uncached ROM, by stage** (SNES zip, from Cheevos's own modules, 2026-10-18): Python
+  0.12-0.4 s, `cheevos.platform.paths` import 0.35 s, `candidates` 0.2 s, the proxy's
+  `rom_hashing` with its library 0.2 s, extracting and hashing 0.25 s, `sqlite3` and the
+  proxy's cache 0.15 s, `ssl` with `http.client` 0.4-0.5 s, then RA's `r=gameid` 1.6-5.2 s.
+  Inside that request: the CA context 0.1 s, DNS 0.3-0.8 s (the first lookup in a process),
+  TCP 0.1 s, TLS 0.1 s, the answer 0.1 s. Spruce's `curl` (`spruce/bin{,64}/curl`, c-ares DNS)
+  fetched the same answer in 0.3-0.6 s, process included, so the helper now asks RA with it
+  ([integration.md](integration.md)). Same build, alternating runs, PyUI busy in its menu
+  (load average 4): the RA step 0.6-1.3 s through curl against 1.8-2.1 s through Python; a
+  whole new SNES zip 2.5-3.7 s against 3.8-4.2 s. A hash in the proxy's cache never asks RA
+  (1.9-2.1 s either way). The first lookup after a reboot spent 11 s hashing and reading the
+  proxy's cache, against 0.25 s afterwards.
 - **How it was measured:** a patched build (never shipped) logs the first frame's time from
   the process start (`/proc/self/stat`), and can run `cProfile` up to it or start Python with
   `-X importtime`. A launch with `-X` doesn't match `pgrep -f 'python3[.]10 -m [c]heevos'`
