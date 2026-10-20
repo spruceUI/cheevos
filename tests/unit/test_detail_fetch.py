@@ -14,7 +14,7 @@ from cheevos.core.errors import (
 )
 from cheevos.core.ra_client.parse import parse_game_detail
 from cheevos.core.storage.data_cache import DataCache
-from cheevos.core.sync.detail_fetch import DetailFetcher, FetchState
+from cheevos.core.sync.detail_fetch import DetailFetcher, FetchState, FetchStatus
 from cheevos.core.sync.engine import RATE_LIMITED_UNTIL_KEY
 from cheevos.core.sync.progress import Failure
 
@@ -68,7 +68,7 @@ def settled(fetcher, game_id):
 
 
 class Harness:
-    def __init__(self, tmp_path):
+    def __init__(self, tmp_path, **kwargs):
         self.db = tmp_path / "data.db"
         DataCache.open(self.db, "Balah").close()
         self.clients = []
@@ -77,7 +77,7 @@ class Harness:
         self.gated = set()
         self.gate = threading.Event()
         self.now = NOW
-        self.fetcher = DetailFetcher(self.open_session, clock=lambda: self.now)
+        self.fetcher = DetailFetcher(self.open_session, clock=lambda: self.now, **kwargs)
 
     def open_session(self, stop):
         client = FakeClient(stop)
@@ -116,6 +116,37 @@ def test_a_requested_game_is_fetched_and_stored(harness):
     cache = harness.cache()
     assert len(cache.game_detail(FFTA).achievements) == 138
     cache.close()
+
+
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [
+        (None, (FetchStatus(FetchState.DONE), True)),
+        (NetworkError("offline"), (FetchStatus(FetchState.FAILED, Failure.NETWORK), False)),
+    ],
+)
+def test_notification_sees_the_published_result_and_committed_details(tmp_path, error, expected):
+    notified = threading.Event()
+    observed = []
+
+    def changed():
+        cache = harness.cache()
+        try:
+            stored = cache.game_detail(FFTA) is not None
+        finally:
+            cache.close()
+        observed.append((harness.fetcher.status(FFTA), stored))
+        notified.set()
+
+    harness = Harness(tmp_path, on_change=changed)
+    if error is not None:
+        harness.errors[FFTA] = error
+    try:
+        harness.fetcher.request(FFTA)
+        assert notified.wait(5)
+    finally:
+        harness.fetcher.close()
+    assert observed == [expected]
 
 
 def test_a_fetched_game_is_not_fetched_again(harness):

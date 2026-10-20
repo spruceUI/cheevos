@@ -38,13 +38,20 @@ def test_background_sync_runs_on_a_worker_and_closes(tmp_path):
 
 
 def test_background_sync_reports_open_failure(tmp_path):
+    statuses = []
+
+    def changed():
+        statuses.append(sync.status())
+
     def open_deps(_cancel):
         raise CheevosError("no key")
 
-    sync = BackgroundSync(open_deps, online=lambda: True)
+    sync = BackgroundSync(open_deps, online=lambda: True, on_change=changed)
     sync.start(SyncOptions())
     sync.join(timeout=5)
     assert sync.status().failure is Failure.ERROR
+    assert statuses[-1].failure is Failure.ERROR
+    assert any(status.running for status in statuses)
 
 
 def test_background_sync_refuses_a_second_concurrent_start(tmp_path):

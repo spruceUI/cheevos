@@ -70,7 +70,7 @@ PyUI's views, without patching PyUI.
 ## View gotchas
 - **Timeouts:** `view.get_selection()` never returns `None`. On a timeout or cursor move it
   returns a `Selection` whose input is `None`. That is our tick for live refreshes (sync
-  progress).
+  progress); "Idle frames" below says how often it comes.
 - **Popups:** a `POPUP` view freezes the current frame as its backdrop
   (`Display.lock_current_image`) until `view_finished()` is called. Forget it and every later
   screen is drawn over the frozen frame. `PreparedView.show()` (and so `choose()`) always calls
@@ -107,11 +107,11 @@ PyUI's views, without patching PyUI.
   the grid for the enlarged selection and its focus ring (`Frame.FOCUS`, whose inner black band
   is exactly a gold frame, drawn after it). Text is fitted only when the selection changes. A
   new view starts with the selection on its first visible row (PyUI's puts it last). Measured
-  on a Mini+ (640×480, 12 frames/s even when idle): 59 draw calls, 16.5 ms to draw plus 10 ms to
-  present; every badge framed (a mastered set) 89 calls, 21 + 13 ms. The games list is 52 calls,
-  22 + 10 ms. D-pad moves take 40–65 ms, a new row ~100 ms, R1 to an unseen page ~160 ms
-  (decoding 32 badges), and back to a seen page ~65 ms. Caching the composed page in a texture
-  would only save ~10 ms per idle frame, so it isn't done.
+  on a Mini+ (640×480, 12 frames/s when drawing every frame): 59 draw calls, 16.5 ms to draw
+  plus 10 ms to present; every badge framed (a mastered set) 89 calls, 21 + 13 ms. The games
+  list is 52 calls, 22 + 10 ms. D-pad moves take 40–65 ms, a new row ~100 ms, R1 to an unseen
+  page ~160 ms (decoding 32 badges), and back to a seen page ~65 ms. Caching the composed page
+  in a texture would only save ~10 ms per idle frame, so it isn't done.
   - The strip's title uses the normal text colour: the "selected" colour is meant for a
     highlight bar and disappears on MINIMAL's and ART_BOOK_NEXT's plain background.
   - Awards use it as they are: a game icon fits the badge square, and the date goes where an
@@ -184,8 +184,22 @@ PyUI's views, without patching PyUI.
   the screen edge. The bridge fits both (`ui/pyui/text.py`). A `MenuItem.tail` (an award's
   date) stays whole after the description: `fit_with_tail` shortens the description first.
   `displayable()` strips a leading space, so the separator before the tail is added after it.
+  Since SpruceOS `4355fe1b`, PyUI also cuts every list title to 35 characters (46 at 1280×720,
+  `Theme.scale_with_width_multiplier(35)`) and scrolls the selected one after a second. A
+  fitted title longer than that loses its end without an ellipsis ("Achievement of the Week
+  2026 - Silv" at 640×480), and the screen doesn't go idle while it scrolls.
 
 ## Drawing gotchas
+- **Idle frames:** since [SpruceOS #1890](https://github.com/spruceUI/spruceOS/pull/1890),
+  `Controller.get_input()` returns at once (one frame) while the screen changes or was used in
+  the last 1.5 s. Once six frames in a row come out the same, it waits up to a second for a
+  key. A change made on another thread would then show up to a second late, so the image, game
+  and sync workers call `redraw.request_redraw()` after publishing it
+  ([sync-and-storage.md](sync-and-storage.md), "Waking idle screens"). That wraps
+  `Controller.request_redraw()`, which is safe from any thread, ends the wait without
+  dismissing the screensaver, and is missing on older PyUI (which draws every frame anyway).
+  Time-based text (the clock, "synced 5 min ago") needs no request: idle frames still come
+  every second.
 - **Texture caches never evict:** `Display` caches a texture per distinct string and per image
   path forever. When an allocation fails, it flushes both and retries ("Clearing cache : Out of
   memory" in the log). On the Mini that happened every half minute of browsing long lists, and

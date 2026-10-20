@@ -27,7 +27,7 @@ build-backend = "uv_build"
 
 [tool.cheevos]
 # SpruceOS commit the PyUI bridge and the desktop runner were last verified against.
-pyui-tested-commit = "a3c494b13046ef0e238b963f36c9cab3f3a1e3f0"
+pyui-tested-commit = "339d692124177ffc11b426060424851eaabbe2c1"
 # SpruceOS commit whose RAOfflineProxy bundle ROM identification was last verified against
 # (RAOfflineProxy 2.2.0-alpha1 nightly 54). `make proxy-check` checks it; TESTING.md has the steps.
 proxy-tested-commit = "f037b64bdfa4a6fd0f06e4221b97f1cf4751b933"

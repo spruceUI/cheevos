@@ -35,10 +35,21 @@ def test_game_launch_argument_is_optional_and_positive():
 
 def test_direct_launch_never_starts_an_account_sync(monkeypatch, tmp_path):
     calls = []
+    notifications = []
+
+    def redraw():
+        pass
+
+    def notified(worker):
+        def create(*args, on_change, **kwargs):
+            notifications.append(on_change)
+            return worker(*args, on_change=on_change, **kwargs)
+
+        return create
 
     class Details:
-        def __init__(self, *_args, **_kwargs):
-            pass
+        def __init__(self, *_args, on_change, **_kwargs):
+            notifications.append(on_change)
 
         def request(self, game_id, **kwargs):
             calls.append((game_id, kwargs))
@@ -55,9 +66,12 @@ def test_direct_launch_never_starts_an_account_sync(monkeypatch, tmp_path):
         ctx.start_sync(full=True)
 
     monkeypatch.setattr(app.primitives, "screen_size", lambda: (640, 480))
+    monkeypatch.setattr(app.redraw, "request_redraw", redraw)
     monkeypatch.setattr(app, "ensure_credentials", lambda *_args: Credentials("Test", "x" * 32))
     monkeypatch.setattr(app, "DetailFetcher", Details)
     monkeypatch.setattr(app.BackgroundSync, "start", forbid_sync)
+    monkeypatch.setattr(app, "BackgroundSync", notified(app.BackgroundSync))
+    monkeypatch.setattr(app, "LazyMediaFetcher", notified(app.LazyMediaFetcher))
     monkeypatch.setattr(app.Home, "run", forbid_sync)
     monkeypatch.setattr(game_detail, "show_game", show_game)
     monkeypatch.setattr(app.status_bar, "installed", lambda *_args: contextlib.nullcontext())
@@ -66,6 +80,7 @@ def test_direct_launch_never_starts_an_account_sync(monkeypatch, tmp_path):
     paths = Paths(tmp_path, tmp_path / "scratch")
     app.run(started_at=0, env=app.AppEnvironment(paths=paths), game_id=519)
     assert calls == [(519, {"refresh": True}), (519, {"refresh": True})]
+    assert notifications == [redraw] * 3  # every worker wakes an idle screen
 
 
 @pytest.mark.parametrize(
