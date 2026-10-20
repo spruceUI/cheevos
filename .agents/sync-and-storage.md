@@ -163,7 +163,8 @@ It runs on a background worker thread. The UI reads committed DB state and a thr
 `python -m cheevos.core.sync` runs a sync without the UI ([TESTING.md](../TESTING.md)).
 
 ## Threads
-- **UI thread**: PyUI and SDL only.
+- **UI thread**: PyUI and SDL only. Other threads never draw; they only wake an idle screen
+  ("Waking idle screens", below).
 - **Sync thread**: network and DB writes.
 - **Image worker**: one thread fetching images needed on screen (`LazyMediaFetcher`), with its
   own cache connection. Not a FIFO: an image for the screen goes ahead of everything waiting
@@ -188,6 +189,14 @@ It runs on a background worker thread. The UI reads committed DB state and a thr
   `PRAGMA data_version` for other connections, plus the UI connection's own `total_changes`.
   It reads no table, so the games list checks it on every visit and reads the games again only
   when it changed.
+- **Waking idle screens:** a settled screen draws only once a second
+  ([pyui.md](pyui.md), "Idle frames"), so `LazyMediaFetcher`, `DetailFetcher` and
+  `BackgroundSync` take an `on_change` callback, which `app.run` sets to the bridge's
+  `redraw.request_redraw`. They call it once the change can be seen: an image after it is
+  stored and `version` bumped, a game after its outcome is recorded (and its details
+  committed), the sync after each new status. They call it outside their locks, so the UI
+  can read the new state at once. Cancelling a sync doesn't call it: a press comes first, and
+  the screen is drawn at full rate after one.
 - **Request pacing**: every thread that calls the Web API takes its slots from the app's one
   `Pacer`, so together they stay within a short burst, then one request every 3 s
   ([retroachievements.md](retroachievements.md), "Politeness").

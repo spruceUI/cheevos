@@ -94,6 +94,23 @@ def test_success_stores_and_bumps_version(harness):
     assert harness.stored("badge/1")
 
 
+def test_notification_sees_the_committed_image_and_new_version(tmp_path):
+    notified = threading.Event()
+    observed = []
+
+    def changed():
+        observed.append((harness.fetcher.version, harness.stored("badge/1")))
+        notified.set()
+
+    harness = Harness(tmp_path, on_change=changed)
+    try:
+        harness.fetcher.request("badge/1", "/Badge/1.png")
+        assert notified.wait(5)
+        assert observed == [(1, True)]
+    finally:
+        harness.fetcher.close()
+
+
 def test_requests_are_deduplicated_while_queued_in_flight_and_after_storing(harness):
     harness.client.gated.add("/Badge/1.png")
     harness.fetcher.request("badge/1", "/Badge/1.png")
