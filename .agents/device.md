@@ -7,7 +7,7 @@ always apply. The device commands are in [TESTING.md](../TESTING.md).
 
 | Item | Value |
 |---|---|
-| OS | SpruceOS ≥ 4.5.0. Needs PyUI views, `spruce/scripts/appEnv.sh` and RAOfflineProxy 2.x. |
+| OS | The SpruceOS it ships in: Cheevos is bundled with Spruce, so the bridge needs only the PyUI it was verified against (`pyui-tested-commit`). Needs PyUI views, `spruce/scripts/appEnv.sh` and RAOfflineProxy 2.x. |
 | Devices | Every device supported by SpruceOS. |
 | Resolutions | Every resolution the default SPRUCE theme ships: 640×480, 720×480, 752×560, 720×720, 960×720, 1024×768, 1280×720, 480×800. |
 | Runtime | Spruce's CPython **3.10.18**: `$SPRUCE_PYTHON` (32-bit: `spruce/bin/python/bin/python3.10`; 64-bit: `spruce/flip/bin/python3.10`). |

@@ -99,7 +99,7 @@ Settings.
   - The selected badge is drawn last, about 10% larger, over its neighbours, inside a white
     focus ring with a black edge (a hardcore badge keeps its gold outline inside the ring).
   - Under the grid, two lines for the selection: title | points, then description | unlock mode
-    (Hardcore, Casual, Pending sync or Locked) and type tag. Each part is shortened with "…"
+    (Hardcore, Casual, Pending sync or Locked) and type tag. Each part is shortened with "..."
     when needed, right-hand parts first; the card (A) has the full text. The description follows
     the card's spoiler setting ("Description hidden").
   - A thin scrollbar on the right when the set is longer than a screen; PyUI's `selected/total`
@@ -161,7 +161,7 @@ The badges of RA's profile galleries (RAWeb `site-award.php`; how they are group
   An event's image is the tier the player chose to show (`display_award_tier`); its text is the
   tier actually earned. Before an event's details are fetched (offline first sync, or the v2
   API refused), it shows RA's title and image with "Event award": nothing is invented.
-  Descriptions are shortened with "…" before the date is (`MenuItem.tail`).
+  Descriptions are shortened with "..." before the date is (`MenuItem.tail`).
 - **Views** (Select cycles carousel → grid → list, and the bottom bar names the next one; also
   "View" in the Y/Menu popup). All three show the same awards in the same order.
   - **Carousel** (default): PyUI's animated carousel, the selection larger and centred, smaller
@@ -295,7 +295,9 @@ so the bridge shows "[START] Done [B] Delete [L1] Shift [R1] Caps" in the bottom
 - **Text hygiene**:
   - Emoji and pictographs (e.g. in rich presence) are stripped, because theme fonts can't draw
     them. Accented letters a font lacks become the plain letter.
-  - Top-bar titles are truncated with "…" so they clear the clock and battery icons.
+  - Top-bar titles are truncated with "..." so they clear the clock and battery icons.
+  - A list title that doesn't fit ends with "..." before the value on its right; the selected
+    one scrolls after a second so it can be read (PyUI's behaviour, as in Spruce's own lists).
 
 ## Offline and error behaviour
 
