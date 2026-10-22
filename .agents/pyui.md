@@ -180,19 +180,19 @@ PyUI's views, without patching PyUI.
   row's average background colour covers only the strip of bar inside the ring, ending at
   the circle centre; the rim hides the strip's left edge. The top bar uses these same PNGs
   at a smaller size, including mastery glow, with no bar to mask inside hollow rings.
-- **Long text:** PyUI does not truncate list titles against `value_text`, or descriptions at
-  the screen edge. The bridge fits both (`ui/pyui/text.py`). A `MenuItem.tail` (an award's
-  date) stays whole after the description: `fit_with_tail` shortens the description first.
+- **Long text:** since [SpruceOS #1900](https://github.com/spruceUI/spruceOS/pull/1900), PyUI
+  fits list titles to their room in pixels: a title that fits is left alone, a longer one ends
+  with "..." before the right-aligned value, and the selected one scrolls after a second.
+  The bridge passes titles whole (after `displayable()`). A selected title that scrolls keeps
+  the screen redrawing (about 66% of a core on a Mini+, against 7% idle) until the next press
+  or the screensaver. That's Spruce's own behaviour, accepted on 2026-10-22 so long titles can
+  be read. PyUI still doesn't fit descriptions: unselected ones run off the right edge, and
+  selected ones scroll past 70 characters. The bridge fits them (`text.fit_with_tail`), and a
+  `MenuItem.tail` (an award's date) stays whole: the description is shortened first.
   `displayable()` strips a leading space, so the separator before the tail is added after it.
-  The room (`text.list_room`) takes the icon column from the selected-row background's width,
-  as PyUI does, not from the screen's. Only SPRUCE scales that background to the screen: the
+  The width (`text.description_room`) takes the icon column from the selected-row
+  background's width, as PyUI does. Only SPRUCE scales that background to the screen: the
   other themes have a 640 px one at every resolution, and SPRUCE's is 640 px at 480×800.
-  Until 2026-10-21 the room used `screen // 8`. Titles came out 20 px too wide at 480×800 and
-  were cut earlier than needed on wide screens in other themes.
-  Since SpruceOS `4355fe1b`, PyUI also cuts every list title to 35 characters (46 at 1280×720,
-  `Theme.scale_with_width_multiplier(35)`) and scrolls the selected one after a second. A
-  fitted title longer than that loses its end without an ellipsis ("Achievement of the Week
-  2026 - Silv" at 640×480), and the screen doesn't go idle while it scrolls.
 
 ## Drawing gotchas
 - **Idle frames:** since [SpruceOS #1890](https://github.com/spruceUI/spruceOS/pull/1890),
@@ -216,10 +216,12 @@ PyUI's views, without patching PyUI.
   Error received on loading <text>"), which do happen when memory runs low. Don't put secrets
   on screen without muting its log (`ask_text(..., secret=True)`).
 - **Measurement cost:** measuring text with SDL_ttf for every row is very slow on a Mini
-  (1,000 rows took more than 15 s). Use cached glyph advances (`text.text_width`): one dict per
-  font, summed with `sum(map(...))`. A cached call per character (`lru_cache`, an Enum's
-  `.value`) cost several times more. `displayable()` returns plain ASCII at once and looks up
-  any other character once per font: every description has a "·".
+  (1,000 rows took more than 15 s; one `TTF_SizeUTF8` call is about 105 µs). Use PyUI's cached
+  glyph advances (`Display.get_text_width_from_glyphs` and `count_chars_that_fit`, through
+  `text.text_width` and `fit_text`): about 30 µs a title. They leave out kerning, so they come
+  out 0–4 px wider than SDL_ttf's measurement, never narrower. `displayable()` returns plain
+  ASCII at once and looks up any other character once per font, through PyUI's
+  `Display.requires_fallback_font`: every description has a "·".
 - **Row height:** PyUI's own `_calculate_line_height` sizes every row's title and description
   with SDL_ttf to find the tallest (0.66 s for 2,940 rows). `views._one_sample_row` has it
   measure one sample row instead, holding every character the rows use; our rows share one
