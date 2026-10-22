@@ -134,9 +134,9 @@ factory and game-menu fixes have not yet been timed on a device.
   (+0.3 s).
 - **PyUI's upstream device factory:** `bootstrap.pyui_device` imports `initialize_device`
   from `devices.device_factory` for every device, including `DESKTOP`. This avoids the
-  launcher imports without copying any device branches. If that module is absent on an
-  older supported SpruceOS, it falls back to `mainui.initialize_device`; errors inside the
-  factory still surface. `tests/unit/test_ui_bootstrap.py` covers both paths.
+  launcher imports without copying any device branches; errors inside the factory surface
+  as start-up errors. `tests/unit/test_ui_bootstrap.py` checks that importing it leaves the
+  launcher and its game menus unloaded.
 - **PyUI's game menus load on first activity-icon lookup:** SpruceOS #1857 (merge commit
   `a3c494b1`) moved the two menu imports into `MiyooTrimCommon.get_image_for_activity`, which
   Cheevos never calls. On a Mac, after importing PyUI's shared UI modules, the Mini device

@@ -207,7 +207,7 @@ unlocks show in the UI: [product.md](product.md).
 - Guarded by a schema check. Any `sqlite3.Error` on the read-only open (locked, or a WAL without
   its `-shm` file while the service starts) or anything unexpected means "proxy unavailable":
   the features hide and the next screen tries again. Never crash: the screens don't catch
-  errors, so one escaping the reader would close the app. A missing proxy (older Spruce),
+  errors, so one escaping the reader would close the app. A proxy that isn't installed,
   a proxy that never ran (no `data/`) and a missing or broken `spruce-config.json` all read as
   "no proxy".
 - We never flush, delete or write the proxy's queue or state.

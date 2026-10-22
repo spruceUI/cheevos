@@ -422,9 +422,7 @@ class PreparedView:
         finally:
             # Popups freeze the frame underneath as their backdrop until told they're done;
             # without this, every later screen is drawn over that frozen frame.
-            finished = getattr(self._view, "view_finished", None)
-            if finished is not None:
-                finished()
+            self._view.view_finished()
 
     def _select(
         self, accepted: list[Any], on_tick: TickHandler | None, *, global_start: bool

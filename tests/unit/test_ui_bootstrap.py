@@ -23,56 +23,29 @@ def device_modules(monkeypatch):
     monkeypatch.setitem(sys.modules, "devices", package)
     monkeypatch.setitem(sys.modules, "devices.device", SimpleNamespace(Device=holder))
     factory = Mock()
-    legacy = Mock()
     monkeypatch.setitem(
         sys.modules, "devices.device_factory", SimpleNamespace(initialize_device=factory)
     )
-    monkeypatch.setitem(sys.modules, "mainui", SimpleNamespace(initialize_device=legacy))
     backlight = Mock()
     monkeypatch.setattr("cheevos.ui.pyui.bootstrap._enable_backlight_control", backlight)
-    return SimpleNamespace(device=device, factory=factory, legacy=legacy, backlight=backlight)
+    return SimpleNamespace(device=device, factory=factory, backlight=backlight)
 
 
 @pytest.mark.parametrize("name", ["MIYOO_MINI_PLUS", "TRIMUI_BRICK", "DESKTOP"])
 def test_device_uses_upstream_factory(name, device_modules):
     assert pyui_device(name) is device_modules.device
     device_modules.factory.assert_called_once_with(name, main_ui_mode=False)
-    device_modules.legacy.assert_not_called()
     device_modules.backlight.assert_called_once_with(device_modules.device)
-
-
-def test_device_falls_back_to_mainui_when_factory_module_is_absent(monkeypatch, device_modules):
-    monkeypatch.setitem(sys.modules, "devices.device_factory", None)
-    assert pyui_device("MIYOO_MINI_PLUS") is device_modules.device
-    device_modules.legacy.assert_called_once_with("MIYOO_MINI_PLUS", main_ui_mode=False)
-    device_modules.factory.assert_not_called()
-    device_modules.backlight.assert_called_once_with(device_modules.device)
-
-
-@pytest.mark.parametrize("missing", ["sdl2", "devices.miyoo.mini.model_variables"])
-def test_device_does_not_hide_missing_factory_dependencies(monkeypatch, device_modules, missing):
-    factory = ModuleType("devices.device_factory")
-
-    def missing_dependency(_name):
-        raise ModuleNotFoundError("missing factory dependency", name=missing)
-
-    monkeypatch.setattr(factory, "__getattr__", missing_dependency, raising=False)
-    monkeypatch.setitem(sys.modules, "devices.device_factory", factory)
-    with pytest.raises(ModuleNotFoundError) as error:
-        pyui_device("MIYOO_MINI_PLUS")
-    assert error.value.name == missing
-    device_modules.legacy.assert_not_called()
 
 
 def test_device_does_not_hide_factory_initialization_errors(device_modules):
     device_modules.factory.side_effect = ModuleNotFoundError("broken device", name="sdl2")
     with pytest.raises(ModuleNotFoundError, match="broken device"):
         pyui_device("MIYOO_MINI_PLUS")
-    device_modules.legacy.assert_not_called()
 
 
 @pytest.mark.skipif(
-    not (PYUI_DIR / "devices/device_factory.py").is_file(), reason="no upstream PyUI factory"
+    not (PYUI_DIR / "devices/device_factory.py").is_file(), reason="no PyUI checkout"
 )
 def test_upstream_device_imports_leave_launcher_and_game_menus_unloaded():
     probe = """
@@ -107,7 +80,6 @@ def test_wifi_status_is_read_ahead_on_a_thread():
     _warm_wifi_status(SimpleNamespace(get_wifi_status=get_wifi_status))
     assert read.wait(5)
     assert threads[0] is not main
-    _warm_wifi_status(SimpleNamespace())  # devices without Wi-Fi: nothing to read
 
 
 def test_a_failed_wifi_read_does_not_escape():

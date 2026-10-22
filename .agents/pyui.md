@@ -23,10 +23,8 @@ PyUI's views, without patching PyUI.
   `devices.device_factory.initialize_device(..., main_ui_mode=False)` (the mode Spruce's
   `-msgDisplay` helpers use). The factory was extracted from `mainui` in
   [SpruceOS #1857](https://github.com/spruceUI/spruceOS/pull/1857), so creating a device no
-  longer loads the launcher or its game menus. On older SpruceOS releases without that
-  module, the bridge falls back to `mainui.initialize_device`; importing `mainui` doesn't
-  start PyUI. The bridge keeps no copy of PyUI's device table. A missing dependency inside
-  the factory is a start-up error, not a reason to fall back.
+  longer loads the launcher or its game menus. The bridge keeps no copy of PyUI's device
+  table.
 - **Standard views** (`ViewCreator.create_view`): lists (`ICON_AND_DESC`) and popups
   (`POPUP`), through `views.choose()`, or a `views.PreparedView` that a screen keeps to show
   again ("Showing a view again", below). The same `PreparedView` builds our two subclasses of
@@ -201,8 +199,8 @@ PyUI's views, without patching PyUI.
   key. A change made on another thread would then show up to a second late, so the image, game
   and sync workers call `redraw.request_redraw()` after publishing it
   ([sync-and-storage.md](sync-and-storage.md), "Waking idle screens"). That wraps
-  `Controller.request_redraw()`, which is safe from any thread, ends the wait without
-  dismissing the screensaver, and is missing on older PyUI (which draws every frame anyway).
+  `Controller.request_redraw()`, which is safe from any thread and ends the wait without
+  dismissing the screensaver.
   Time-based text (the clock, "synced 5 min ago") needs no request: idle frames still come
   every second.
 - **Texture caches never evict:** `Display` caches a texture per distinct string and per image

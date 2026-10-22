@@ -14,10 +14,3 @@ def test_redraw_uses_the_upstream_notification(monkeypatch):
     )
     request_redraw()
     redraw.assert_called_once_with()
-
-
-def test_redraw_is_optional_on_older_pyui(monkeypatch):
-    monkeypatch.setitem(
-        sys.modules, "controller.controller", SimpleNamespace(Controller=SimpleNamespace())
-    )
-    request_redraw()
