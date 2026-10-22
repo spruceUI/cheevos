@@ -184,6 +184,11 @@ PyUI's views, without patching PyUI.
   the screen edge. The bridge fits both (`ui/pyui/text.py`). A `MenuItem.tail` (an award's
   date) stays whole after the description: `fit_with_tail` shortens the description first.
   `displayable()` strips a leading space, so the separator before the tail is added after it.
+  The room (`text.list_room`) takes the icon column from the selected-row background's width,
+  as PyUI does, not from the screen's. Only SPRUCE scales that background to the screen: the
+  other themes have a 640 px one at every resolution, and SPRUCE's is 640 px at 480×800.
+  Until 2026-10-21 the room used `screen // 8`. Titles came out 20 px too wide at 480×800 and
+  were cut earlier than needed on wide screens in other themes.
   Since SpruceOS `4355fe1b`, PyUI also cuts every list title to 35 characters (46 at 1280×720,
   `Theme.scale_with_width_multiplier(35)`) and scrolls the selected one after a second. A
   fitted title longer than that loses its end without an ellipsis ("Achievement of the Week

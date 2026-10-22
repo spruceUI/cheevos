@@ -1,3 +1,6 @@
+import sys
+from types import SimpleNamespace
+
 import pytest
 
 from cheevos.ui.pyui import text
@@ -72,6 +75,25 @@ def test_fit_with_tail_keeps_the_date_whole():
     assert fit_with_tail("Awarded", "27 April 2026", Text.BODY, 120) == "Awarded..."
     assert fit_with_tail("", "1 May", Text.BODY, 200) == "1 May"
     assert fit_with_tail("Mastered", "", Text.BODY, 200) == "Mastered"
+
+
+def test_list_room_takes_the_icon_column_from_the_row_background(monkeypatch):
+    # SPRUCE at 480x800: the row background is 640 px wide, so PyUI's icon column is 80 px.
+    device = SimpleNamespace(screen_width=lambda: 480)
+    theme = SimpleNamespace(
+        get_list_large_selected_bg=lambda: "bg-list-l.png",
+        get_descriptive_list_icon_offset_x=lambda: 7,
+        get_descriptive_list_text_from_icon_offset=lambda: 7,
+    )
+    display = SimpleNamespace(get_image_dimensions=lambda _path: (640, 90))
+    monkeypatch.setitem(
+        sys.modules,
+        "devices.device",
+        SimpleNamespace(Device=SimpleNamespace(get_device=lambda: device)),
+    )
+    monkeypatch.setitem(sys.modules, "themes.theme", SimpleNamespace(Theme=theme))
+    monkeypatch.setitem(sys.modules, "display.display", SimpleNamespace(Display=display))
+    assert text.list_room() == ListRoom(full=480 - 7 - 80 - 7 * 2, gap=7, least=120)
 
 
 def test_list_room_leaves_the_value_its_width_and_the_title_a_minimum():

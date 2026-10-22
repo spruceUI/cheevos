@@ -37,6 +37,7 @@ _FIT_MARGIN = 0.97
 # Share of the screen width the top-bar title may use if PyUI's top bar can't be measured.
 _TITLE_WIDTH_SHARE = 0.44
 _TOP_BAR_PAD = 10  # PyUI's spacing in the top bar (TopBar.render_top_bar_menu_not_skipped)
+_ICON_SHARE = 0.125  # PyUI's icon column: 1/8 of the selected-row background's width
 _title_rooms: dict[int, int] = {}  # screen width -> room for the title
 
 
@@ -406,17 +407,21 @@ class ListRoom:
 def list_room() -> ListRoom:
     """Measure the room for text in a list row; measure once per list, not once per row.
 
-    Mirrors PyUI's descriptive list layout: the icon column is 12.5% of the row, the title
-    starts a theme-defined offset after it, and the value is right-aligned with that offset.
+    Mirrors PyUI's descriptive list layout: the icon column is 12.5% of the selected-row
+    background's width, the title starts a theme-defined offset after it, and the value is
+    right-aligned with that offset. The background isn't always as wide as the screen: most
+    themes have a 640 px one at every resolution, and SPRUCE's is 640 px at 480x800.
 
     Returns:
         The room.
     """
     from devices.device import Device
+    from display.display import Display
     from themes.theme import Theme
 
     screen = int(Device.get_device().screen_width())
+    row = int(Display.get_image_dimensions(Theme.get_list_large_selected_bg())[0]) or screen
     gap = int(Theme.get_descriptive_list_text_from_icon_offset())
-    used = int(Theme.get_descriptive_list_icon_offset_x()) + screen // 8 + gap * 2
+    used = int(Theme.get_descriptive_list_icon_offset_x()) + int(row * _ICON_SHARE) + gap * 2
     least = screen // 4
     return ListRoom(max(screen - used, least), gap, least)
