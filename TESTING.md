@@ -132,7 +132,8 @@ uv run python -m cheevos.platform.desktop --headless --res 640x480 \
 
 Script tokens: `up down left right a b x y l1 r1 l2 r2 start select menu`, `shot:<name>` (save
 `build/screens/<WxH>/<name>.png`, or `--out <dir>`), and `wait:N` (N idle ticks of 1/12 s, for
-things that take time, like a sync).
+things that take time, like a sync). `--clock 10:30` fixes the top bar's clock, so shots taken at
+different times come out the same.
 
 - `make screens` renders the standard walk-through at 640×480, 752×560 and 1280×720 into
   `build/screens/`. Each resolution starts on a fresh temporary SD card, so settings and view
@@ -141,7 +142,8 @@ things that take time, like a sync).
 - A run fails if the app exits before the script ends. That usually means the script drifted
   from the screens, e.g. a B too many after a press that did nothing.
 - `make doc-screens` renders the wiki's screenshots (`docs/images/`) from the `showcase`
-  drill. Themes found in `dev/themes/` (MINIMAL, Pico-8) are included.
+  drill. Themes found in `dev/themes/` (MINIMAL, Pico-8) are included. The clock always shows
+  10:30, so an image changes only when its screen does.
 
 ## Icon assets
 

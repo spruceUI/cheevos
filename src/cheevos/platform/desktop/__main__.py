@@ -20,6 +20,7 @@ Keyboard (RetroArch layout plus Menu): arrows = D-pad, X = A, Z = B, S = X, A = 
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import logging
 import os
@@ -57,6 +58,8 @@ class RunnerOptions:
         live: Use the real RetroAchievements API instead of recorded fixtures.
         verbose: Show PyUI's own log output.
         game_id: Optional target for a game-only session launched from Spruce.
+        clock: Time the top bar shows instead of the time of day, for screenshots that only
+            change when the screens do.
     """
 
     width: int
@@ -73,6 +76,7 @@ class RunnerOptions:
     live: bool
     verbose: bool
     game_id: int | None = None
+    clock: dt.time | None = None
 
 
 def _resolution(text: str) -> tuple[int, int]:
@@ -92,6 +96,24 @@ def _resolution(text: str) -> tuple[int, int]:
     except ValueError as exc:
         raise argparse.ArgumentTypeError(f"expected WIDTHxHEIGHT, got {text!r}") from exc
     return width, height
+
+
+def _time_of_day(text: str) -> dt.time:
+    """Parse ``"10:30"`` into a time of day.
+
+    Args:
+        text: Time as ``HH:MM`` (24-hour).
+
+    Returns:
+        The time.
+
+    Raises:
+        argparse.ArgumentTypeError: If the text is not a valid time.
+    """
+    try:
+        return dt.time.fromisoformat(text)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"expected HH:MM, got {text!r}") from exc
 
 
 def _env_path(name: str, default: Path) -> Path:
@@ -132,6 +154,9 @@ def parse_options(argv: list[str] | None = None) -> RunnerOptions:
     parser.add_argument("--out", type=Path, default=_REPO_ROOT / "build" / "screens")
     parser.add_argument("--verbose", action="store_true", help="show PyUI's log output")
     parser.add_argument(
+        "--clock", type=_time_of_day, help="top-bar time, e.g. 10:30 (default: the time of day)"
+    )
+    parser.add_argument(
         "--live", action="store_true", help="real RA API with dev/sdcard (default: fixtures)"
     )
     args = parser.parse_args(argv)
@@ -156,6 +181,7 @@ def parse_options(argv: list[str] | None = None) -> RunnerOptions:
         live=args.live,
         verbose=args.verbose,
         game_id=args.game_id,
+        clock=args.clock,
     )
 
 
@@ -240,6 +266,37 @@ def _check_desktop_device(options: RunnerOptions) -> str | None:
     return None
 
 
+def _fix_top_bar_clock(shown: dt.time) -> None:
+    """Make PyUI's top bar show ``shown`` instead of the time of day.
+
+    Only the time PyUI reads is replaced: it still formats it as the user config asks (12 or
+    24 hours, AM/PM). Call after PyUI is on ``sys.path``.
+
+    Args:
+        shown: Time to show.
+    """
+    from menus.common import top_bar
+
+    day = dt.date(2026, 1, 1)  # the top bar shows no date
+
+    class FixedDatetime(dt.datetime):
+        """``datetime`` whose current time is always ``shown``."""
+
+        @classmethod
+        def now(cls, tz: dt.tzinfo | None = None) -> FixedDatetime:
+            """Return the fixed time."""
+            return cls.combine(day, shown)
+
+        @classmethod
+        def fromtimestamp(cls, timestamp: float, /, tz: dt.tzinfo | None = None) -> FixedDatetime:
+            """Return the fixed time, whatever the timestamp."""
+            return cls.combine(day, shown)
+
+    if getattr(top_bar, "datetime", None) is not dt.datetime:
+        logger.warning("PyUI's top bar no longer reads datetime; --clock has no effect")
+    top_bar.datetime = FixedDatetime
+
+
 def run(options: RunnerOptions) -> int:
     """Bring up PyUI on its desktop device and run the app.
 
@@ -272,6 +329,8 @@ def run(options: RunnerOptions) -> int:
         user_config_path=options.sd_root / "Saves" / "pyui-common.json",
     )
     bootstrap.bootstrap(setup, lambda: bootstrap.pyui_device(_DEVICE))
+    if options.clock is not None:
+        _fix_top_bar_clock(options.clock)
     from cheevos import app
     from cheevos.platform.desktop.environments import fixture_environment, live_environment
 

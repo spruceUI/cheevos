@@ -23,7 +23,9 @@ def png_size(path: Path) -> tuple[int, int]:
     return struct.unpack(">II", header[16:24])
 
 
-def run_headless(tmp_path: Path, script: str, res: str = "640x480") -> subprocess.CompletedProcess:
+def run_headless(
+    tmp_path: Path, script: str, res: str = "640x480", extra: tuple[str, ...] = ()
+) -> subprocess.CompletedProcess:
     return subprocess.run(
         [
             sys.executable,
@@ -36,6 +38,7 @@ def run_headless(tmp_path: Path, script: str, res: str = "640x480") -> subproces
             script,
             "--out",
             str(tmp_path / "shots"),
+            *extra,
         ],
         capture_output=True,
         text=True,
@@ -61,3 +64,13 @@ def test_app_exit_before_script_end_fails(tmp_path):
     result = run_headless(tmp_path, "b,shot:never")
     assert result.returncode == 1
     assert "captures not taken: never" in result.stderr
+
+
+def test_clock_option_sets_the_top_bar_time(tmp_path):
+    homes = []
+    for index, clock in enumerate(["10:30", "23:59"]):
+        result = run_headless(tmp_path / str(index), "shot:home", extra=("--clock", clock))
+        assert result.returncode == 0, result.stderr
+        assert "--clock has no effect" not in result.stderr
+        homes.append((tmp_path / str(index) / "shots" / "640x480" / "home.png").read_bytes())
+    assert homes[0] != homes[1], "the clock should show in the top bar"

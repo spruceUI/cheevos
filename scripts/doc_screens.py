@@ -22,6 +22,8 @@ OUT = REPO / "docs" / "images"
 THEMES = REPO / "dev" / "themes"
 # Sort the games list by completion (Y > Sort > Completion), so every kind of bar is on screen.
 BY_COMPLETION = "y,down,a,down,down,down,a"
+# The top bar's clock, so the images only change when the screens do.
+CLOCK = "10:30"
 
 # (resolution, theme, script). Shot names become the image file names.
 RUNS: list[tuple[str, str | None, str]] = [
@@ -69,7 +71,7 @@ def render(
     """
     env = {**os.environ, "CHEEVOS_SIMULATE": "showcase"}
     command = [sys.executable, "-m", "cheevos.platform.desktop", "--headless"]
-    command += ["--res", resolution, "--script", script, "--out", str(out)]
+    command += ["--res", resolution, "--clock", CLOCK, "--script", script, "--out", str(out)]
     if game_id is not None:
         command += ["--game-id", str(game_id)]
     if theme is not None:
