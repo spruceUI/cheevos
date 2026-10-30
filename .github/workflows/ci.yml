@@ -211,6 +211,15 @@ jobs:
           sparse-checkout: |
             App/Cheevos
             Licenses/Cheevos
+            App/PyUI/main-ui/apps
+
+      - name: Check that SpruceOS can run the app
+        run: |
+          # Cheevos has no launch script: PyUI runs it in its own process (pyuiEntry).
+          if [ ! -f build/spruceos/App/PyUI/main-ui/apps/native_app.py ]; then
+            echo "::error::SpruceOS $SPRUCEOS_BASE_BRANCH has no PyUI in-process app runner (App/PyUI/main-ui/apps/native_app.py). Merge it first, then rerun this job (see RELEASING.md)."
+            exit 1
+          fi
 
       - name: Mirror the released app
         run: |
@@ -218,7 +227,7 @@ jobs:
           rsync --archive --delete --exclude /LICENSE \
             build/spruce-release/Cheevos/ build/spruceos/App/Cheevos/
           cp build/spruce-release/Cheevos/LICENSE build/spruceos/Licenses/Cheevos/LICENSE.Cheevos.txt
-          chmod 755 build/spruceos/App/Cheevos/launch.sh build/spruceos/App/Cheevos/identify-rom.sh
+          chmod 755 build/spruceos/App/Cheevos/identify-rom.sh
 
       - name: Build the SpruceOS pull request description
         env:

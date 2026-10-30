@@ -1,4 +1,3 @@
-import argparse
 import contextlib
 from pathlib import Path
 from types import SimpleNamespace
@@ -10,7 +9,7 @@ from cheevos import app
 from cheevos.core.credentials import Credentials
 from cheevos.core.sync.detail_fetch import FetchState, FetchStatus
 from cheevos.core.sync.progress import Failure
-from cheevos.platform.arguments import add_game_argument
+from cheevos.platform.desktop.__main__ import parse_options
 from cheevos.platform.paths import Paths
 from cheevos.ui.context import AppContext
 from cheevos.ui.screens import game_detail
@@ -19,18 +18,14 @@ from cheevos.ui.screens.game_status import GameSyncBar
 
 @pytest.mark.parametrize("value", ["0", "-1", "bad", "1.5"])
 def test_invalid_game_ids_are_rejected(value):
-    parser = argparse.ArgumentParser()
-    add_game_argument(parser)
     with pytest.raises(SystemExit):
-        parser.parse_args(["--game-id", value])
+        parse_options(["--game-id", value])
 
 
 def test_game_launch_argument_is_optional_and_positive():
-    parser = argparse.ArgumentParser()
-    add_game_argument(parser)
-    assert parser.parse_args([]).game_id is None
-    assert parser.parse_args(["--game-id", "519"]).game_id == 519
-    assert parser.parse_args(["--game-id", "2147483648"]).game_id == 2147483648
+    assert parse_options([]).game_id is None
+    assert parse_options(["--game-id", "519"]).game_id == 519
+    assert parse_options(["--game-id", "2147483648"]).game_id == 2147483648
 
 
 def test_direct_launch_never_starts_an_account_sync(monkeypatch, tmp_path):

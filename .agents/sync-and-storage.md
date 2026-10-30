@@ -15,7 +15,6 @@ the app deletes it and starts fresh.
 |---|---|---|---|
 | API key | `Saves/cheevos/apikey.txt` | User data | Plain text, user-editable |
 | Settings | `Saves/cheevos/settings.json` | User data | JSON, written atomically (temp file + rename). Unknown keys are ignored and invalid values fall back to defaults. |
-| PyUI view state | `Saves/cheevos/pyui-state.json` | Cache | PyUI's last selections, kept apart from the launcher's own state. |
 | RA data cache | `Saves/cheevos/cache/data.db` | Cache | SQLite: profile, games, achievements, awards, events, sync state. Rebuildable from RA. |
 | Image cache | `Saves/cheevos/cache/media.db` | Cache | SQLite blobs keyed `badge/<BadgeName>[_lock]`, `icon/<gameId>`, `avatar/<user>`, `award/<path without .png>` (event and site badges, e.g. `award/Images/122639`). Kept separate so "Clear image cache" doesn't drop RA data. |
 | ROM identifications | `Saves/cheevos/cache/rom-identifications.json` | Cache | Game IDs the identification helper found, by ROM path, for Spruce's "View achievement progress". JSON, at most 256 entries and 256 KB, written atomically. Spruce reads its matches directly, so their shape is a contract ([integration.md](integration.md), "Direct launch from Spruce"). |

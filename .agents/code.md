@@ -20,7 +20,7 @@ in an upstream PR.
 │ core/      models · storage · ra_client · sync · settings ·
 │            credentials · screenshots · proxy · local_games
 ├─────────────────────────────────────────────────────────────┤
-│ platform/  paths · env detection · device bootstrap · desktop runner (dev only)
+│ platform/  paths · env detection · ROM identification · desktop runner (dev only)
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -44,7 +44,8 @@ in an upstream PR.
 
 ```
 src/cheevos/
-  __main__.py            device entry point: python -m cheevos
+  native.py              the entry point PyUI calls (config.json "pyuiEntry"): one session
+                         inside PyUI's process, and everything it puts into PyUI taken out again
   app.py                 composition root: credentials, caches, sync, media, then home
   core/
     models.py            dataclasses: UserProfile, GameProgress, Achievement, Award, Unlock, ...
@@ -72,8 +73,10 @@ src/cheevos/
     net.py               connectivity check through the shared transport
     clock.py             shared RA Date + monotonic app clock (system clock unchanged)
   ui/
-    pyui/                bridge: bootstrap, views (lists, grids, carousel, popups), primitives
-                         (drawing, input), text (fitting, glyph fallbacks), status_bar,
+    pyui/                bridge: host (what a session borrows from PyUI: textures,
+                         messages, Spruce's settings), views (lists, grids, carousel,
+                         popups), primitives (drawing, input), text (fitting, glyph
+                         fallbacks), status_bar,
                          bar_layout, glyphs, generated (PNG swatches, button glyphs),
                          award_images (static awards), row_bars, bar_colors, image_frames
                          (shared outlines), badge_grid (compact badge grid), carousel (the
@@ -87,23 +90,23 @@ src/cheevos/
     strings.py           every user-facing string (ready for PyUI Language later)
   platform/
     paths.py             every path, from CHEEVOS_SDCARD_ROOT (default /mnt/SDCARD)
-    arguments.py         the --game-id argument shared by the launcher and desktop runner
     identify_rom.py      the identification helper's entry point (identify-rom.sh runs it)
     curl_transport.py    the helper's RA requests through Spruce's curl, Python's HTTPS as
                          the fallback
     proxy_hasher.py      adapter over RAOfflineProxy's rom_hashing wrapper (its only import
                          from the proxy)
-    desktop/             dev only: runner CLI on PyUI's DESKTOP device, fixture/live
-                         environments, drills (showcase_awards: the showcase's event and site
-                         badges)
+    desktop/             dev only: runner CLI on PyUI's DESKTOP device (pyui_setup brings
+                         PyUI up), fixture/live environments, drills (showcase_awards: the
+                         showcase's event and site badges)
   res/icons/             original outlines: 24/48 px status, 96/144 px lists and fallbacks
   res/awards/            pre-rendered awards: dark/light and black/white contrast variants
-app/                     packaging: config.json, launch.sh, identify-rom.sh, cheevos.png
+app/                     packaging: config.json, identify-rom.sh, cheevos.png
 assets/                  icon sources (SVG)
 tests/                   unit and screen tests, fixtures/
 scripts/                 check_conventions, record_fixtures, fetch_dev_media, fetch_pyui.sh,
                          build_package, release_notes, render_icons, make_synthetic_cache,
-                         doc_screens, device.sh, fetch_proxy.sh, check_proxy_compat (with
+                         doc_screens, device.sh (with device_session: make launch's
+                         dev-only session), fetch_proxy.sh, check_proxy_compat (with
                          proxy_native: ELF exports, a simulated native hasher)
 docs/                    the user guide, published as the GitHub wiki (images/ from doc_screens)
 .agents/                 docs for coding agents, by area (AGENTS.md is the entry point)
@@ -141,7 +144,8 @@ On the device, everything is assembled into `/mnt/SDCARD/App/Cheevos/` ([device.
 `make check` runs all of these locally; `make fmt` formats and auto-fixes. Per-file ignores worth
 knowing about:
 - `PLC0415` (import outside top level) is allowed in `cheevos/ui/pyui/**` and the desktop
-  `__main__`, because PyUI is importable only after `add_pyui_to_path()`.
+  `__main__`, because PyUI is importable only inside PyUI's process or after the desktop
+  runner's `add_pyui_to_path()`.
 - `T20` (print) is allowed in `scripts/`.
 - Tests skip docstrings and annotations, and allow `assert`, magic numbers, subprocesses, many
   arguments and boolean flags.
@@ -247,7 +251,7 @@ Tooling gotchas:
 
 How to run all of this: [TESTING.md](../TESTING.md).
 
-## Shell (`launch.sh`, scripts)
+## Shell (`identify-rom.sh`, scripts)
 - POSIX `sh`, compatible with busybox ash, checked with `shellcheck -s sh`.
 - Start by sourcing `/mnt/SDCARD/spruce/scripts/helperFunctions.sh` and `appEnv.sh`. Read only
   `SPRUCE_*` / `PLATFORM` variables from them.

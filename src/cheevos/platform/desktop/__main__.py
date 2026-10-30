@@ -30,13 +30,12 @@ import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
-from cheevos.platform.arguments import add_game_argument
+from cheevos.platform.desktop import pyui_setup
 
 logger = logging.getLogger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 _SPRUCE_CHECKOUT = _REPO_ROOT / ".spruceos"  # scripts/fetch_pyui.sh
-_DEVICE = "DESKTOP"
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,6 +115,27 @@ def _time_of_day(text: str) -> dt.time:
         raise argparse.ArgumentTypeError(f"expected HH:MM, got {text!r}") from exc
 
 
+def _game_id(text: str) -> int:
+    """Parse a positive RA game ID.
+
+    Args:
+        text: The ID as typed.
+
+    Returns:
+        The ID.
+
+    Raises:
+        argparse.ArgumentTypeError: If it is not a positive integer.
+    """
+    try:
+        parsed = int(text)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("expected a positive game ID") from exc
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("expected a positive game ID")
+    return parsed
+
+
 def _env_path(name: str, default: Path) -> Path:
     """Return the path in environment variable ``name``, or ``default``.
 
@@ -142,7 +162,11 @@ def parse_options(argv: list[str] | None = None) -> RunnerOptions:
         The runner options.
     """
     parser = argparse.ArgumentParser(prog="python -m cheevos.platform.desktop")
-    add_game_argument(parser)
+    parser.add_argument(
+        "--game-id",
+        type=_game_id,
+        help="open this RA game only, as Spruce's game menu does",
+    )
     parser.add_argument("--res", type=_resolution, default=(640, 480), help="e.g. 640x480")
     parser.add_argument("--theme", default="SPRUCE")
     parser.add_argument("--headless", action="store_true", help="no window; use with --script")
@@ -254,7 +278,7 @@ def _check_desktop_device(options: RunnerOptions) -> str | None:
     """
     if not (options.pyui_dir / "devices" / "desktop").is_dir():
         return (
-            f"PyUI at {options.pyui_dir} has no {_DEVICE} device (SpruceOS predates it); "
+            f"PyUI at {options.pyui_dir} has no {pyui_setup.DEVICE} device (SpruceOS predates it); "
             "run `make pyui`"
         )
     from devices.desktop.desktop_options import DesktopOptions
@@ -307,41 +331,53 @@ def run(options: RunnerOptions) -> int:
         Process exit code.
     """
     started_at = time.monotonic()
-    os.environ.update(desktop_environment(options))
-    os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-    # pysdl2-dll is exactly what the desktop should use; its import-time notice is noise.
-    warnings.filterwarnings("ignore", message="Using SDL2 binaries from pysdl2-dll")
-
-    from cheevos.ui.pyui import bootstrap
-
-    pyui_logger = _configure_logging(verbose=options.verbose)
-    bootstrap.add_pyui_to_path(options.pyui_dir)
-    bootstrap.install_logger(pyui_logger)
-    if problem := _check_desktop_device(options):
+    if problem := start_pyui(options):
         logger.error("%s", problem)
         return 2
-
-    setup = bootstrap.PyUiSetup(
-        main_ui_dir=options.pyui_dir,
-        config_path=_write_pyui_config(options),
-        state_path=options.sd_root / "Saves" / "cheevos" / "pyui-state.json",
-        theme=options.theme,
-        user_config_path=options.sd_root / "Saves" / "pyui-common.json",
-    )
-    bootstrap.bootstrap(setup, lambda: bootstrap.pyui_device(_DEVICE))
-    if options.clock is not None:
-        _fix_top_bar_clock(options.clock)
-    from cheevos import app
+    from cheevos import native
     from cheevos.platform.desktop.environments import fixture_environment, live_environment
 
     env = (
         live_environment(options.sd_root) if options.live else fixture_environment(options.sd_root)
     )
     try:
-        app.run(started_at=started_at, env=env, game_id=options.game_id)
+        native.session(env, started_at=started_at, game_id=options.game_id)
     except SystemExit as exc:  # Esc, closing the window, or the end of a headless script
         return int(exc.code or 0)
     return _check_script_finished()
+
+
+def start_pyui(options: RunnerOptions) -> str | None:
+    """Bring up PyUI on its desktop device, as PyUI's launcher would before opening the app.
+
+    Args:
+        options: Runner options.
+
+    Returns:
+        Why PyUI can't start, or ``None`` once it is up.
+    """
+    os.environ.update(desktop_environment(options))
+    os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+    # pysdl2-dll is exactly what the desktop should use; its import-time notice is noise.
+    warnings.filterwarnings("ignore", message="Using SDL2 binaries from pysdl2-dll")
+
+    pyui_logger = _configure_logging(verbose=options.verbose)
+    pyui_setup.add_pyui_to_path(options.pyui_dir)
+    pyui_setup.install_logger(pyui_logger)
+    if problem := _check_desktop_device(options):
+        return problem
+
+    setup = pyui_setup.PyUiSetup(
+        main_ui_dir=options.pyui_dir,
+        config_path=_write_pyui_config(options),
+        state_path=options.sd_root / "Saves" / "cheevos" / "pyui-state.json",
+        theme=options.theme,
+        user_config_path=options.sd_root / "Saves" / "pyui-common.json",
+    )
+    pyui_setup.start(setup)
+    if options.clock is not None:
+        _fix_top_bar_clock(options.clock)
+    return None
 
 
 def _check_script_finished() -> int:

@@ -243,12 +243,21 @@ same network.
 ```sh
 export DEVICE_HOST=<device ip>     # or DEVICE_SSH="ssh user@ip" for a full ssh command
 make package deploy                # build dist/App/Cheevos and copy it to App/Cheevos
-make launch                        # start Cheevos, as the Apps menu would
+make launch                        # open Cheevos as PyUI's Apps menu does
+make launch GAME=519               # ...or one game, as the game menu does
 make shot                          # screenshot into build/device.png
-make logs                          # the app log and the last stderr
-make stop                          # ask Cheevos to exit
+make logs                          # the app log and the launched session's stderr
+make stop                          # close a launched Cheevos; PyUI comes back
+scripts/device.sh running          # is Cheevos open, launched or from the menus?
 scripts/device.sh press down a b   # tap buttons
 ```
+
+Cheevos runs inside PyUI's own process (`.agents/pyui.md`, "In-process sessions"). `make launch`
+asks PyUI to exit and runs `scripts/device_session.py` in its place, with PyUI's interpreter,
+environment and options: it brings PyUI up without its menus and opens Cheevos through PyUI's
+own app runner; when Cheevos closes, PyUI restarts. `DEVICE_PYTHON_FLAGS="-X importtime"`
+passes flags to that Python. To test Spruce's menus themselves, open Cheevos from Apps with
+single taps, checking a screenshot before each A, and close it with B.
 
 Password prompts work; an SSH key saves typing. The only thing `deploy` deletes is the old
 `App/Cheevos/cheevos` package before copying the new one.
@@ -261,9 +270,11 @@ them in the device's `/tmp`.
 
 **Be careful with a device that's in use:**
 - Check that it's idle before launching, tapping or deploying: neither Cheevos nor a game should
-  be running (`pgrep -f 'python3[.]10 -m [c]heevos'`, `pgrep -f '[r]a32[.]'`).
+  be running (`scripts/device.sh running`, `pgrep -f '[r]a32[.]'`). Opened from the menus,
+  Cheevos has no process of its own: `running` looks for PyUI holding the app's log open.
 - `press` sends single taps, and only while Cheevos is running: a tap after it exits would reach
-  Spruce's menu, where A starts a game. Don't send MENU, power or button combinations: they
+  Spruce's menu, where A starts a game. In PyUI's own menus, A on Settings' first row powers
+  the device off. Don't send MENU, power or button combinations: they
   trigger Spruce hotkeys.
 - Treat everything outside `App/Cheevos/`, `Saves/cheevos/` and `/tmp` as read-only, and leave
   `Roms/` alone entirely. A ROM library is usually irreplaceable.
@@ -298,10 +309,11 @@ cd /mnt/SDCARD/App/Cheevos && PLATFORM=MiyooMini \
 The window, keyboard, gamepad, scripts and screenshots are PyUI's own `DESKTOP` device
 (SpruceOS `App/PyUI/main-ui/devices/desktop/`, documented in `App/PyUI/docs/desktop_readme.txt`;
 in a SpruceOS checkout, `python3 App/PyUI/main-ui/desktop.py` runs Spruce's whole launcher the
-same way). Cheevos starts it with `devices.device_factory.initialize_device`
-(`bootstrap.pyui_device("DESKTOP")`), falling back to `mainui.initialize_device` on older
-SpruceOS releases. `src/cheevos/platform/desktop/` adds only Cheevos' side: the command line,
-recorded fixtures or the live API, and the drills.
+same way). On a device PyUI is already running when it opens Cheevos; on the desktop,
+`platform/desktop/pyui_setup.py` starts it with `devices.device_factory.initialize_device`, as
+PyUI's launcher would, then the runner opens the same session PyUI would
+(`cheevos.native.session`). `src/cheevos/platform/desktop/` adds only Cheevos' side: the
+command line, recorded fixtures or the live API, and the drills.
 - **Configuration:** the runner passes its options to PyUI as `PYUI_DESKTOP_*` variables (size,
   zoom, headless, script, capture folder). The fake card is PyUI's data folder, so the device's
   own settings land in its `Saves/desktop-system.json`.

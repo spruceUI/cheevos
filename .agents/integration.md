@@ -2,9 +2,12 @@
 
 Cheevos reads other software's files on the SD card and never writes them. It writes only
 `Saves/cheevos/`, `/tmp/cheevos/` and its log. Every path comes from
-`cheevos.platform.paths`. One exception: after the app exits, `launch.sh` copies the Web API
-key into Spruce's `webApiKey` setting (RetroAchievements Settings), when Spruce has it, so a key
-typed in the app shows there too. PyUI isn't running at that point, so it can't overwrite it.
+`cheevos.platform.paths`. One exception: when a session ends, Cheevos copies the Web API key
+into Spruce's `webApiKey` setting (RetroAchievements Settings), when Spruce has it and it
+differs, so a key typed in the app shows there too. It goes through PyUI's `CfwSystemConfig`
+(`ui/pyui/host.py`): PyUI keeps Spruce's settings in memory, and a write to the file behind its
+back would be lost the next time PyUI saves them. PyUI also runs the setting's change command,
+which writes the same key to `apikey.txt`.
 
 ## Credentials and first run (`core/credentials.py`)
 - **Username**, first non-empty of:
@@ -57,9 +60,10 @@ hashes one ROM the player picks in Spruce; scanning a whole library the same way
 the helper's saved paths, could close that gap.
 
 ## Direct launch from Spruce (`core/identification/`, `platform/identify_rom.py`)
-Spruce's game popup ("View achievement progress") resolves the selected ROM, then launches
-`Cheevos/launch.sh --game-id N`. Spruce owns the menu, its fast paths, cancellation,
-messages and the launch. Cheevos owns the rest, in a headless helper process.
+Spruce's game popup ("View achievement progress") resolves the selected ROM, then opens that
+game's session inside PyUI (`cheevos.native.run(game_id=N)`, see [pyui.md](pyui.md),
+"In-process sessions"); B returns to the game menu. Spruce owns the menu, its fast paths,
+cancellation, messages and the launch. Cheevos owns the rest, in a headless helper process.
 
 **Why a Cheevos helper, not a proxy command:** the first version (SpruceOS #1885) added an
 `identify-rom` command to Spruce's bundled RAOfflineProxy. A Spruce OTA then copied three
@@ -89,8 +93,8 @@ wrapper, from its own process.
    `Saves/cheevos/cache/identify-work` and removes it afterwards, so cleanup also works after a
    forced kill. The launcher sources `appEnv.sh` (its output to stderr), sets `PLATFORM` and
    `PYTHONPATH`, changes to the app directory (Python puts the working directory on `sys.path`)
-   and `exec`s `$SPRUCE_PYTHON -m cheevos.platform.identify_rom`. It never goes through
-   `launch.sh` or `cheevos.__main__`, which start the UI. It adds no library path:
+   and `exec`s `$SPRUCE_PYTHON -m cheevos.platform.identify_rom`. It never loads the UI
+   (`cheevos.native`). It adds no library path:
    `rom_hashing` finds `lib/<arch>/libraproxy_rchash.so` itself (it needs only libc).
 4. **The result contract.** One JSON object on stdout; diagnostics go to the app log:
    `{"status":"matched","game_id":1479}`, `{"status":"no_match"}` or
@@ -101,9 +105,10 @@ wrapper, from its own process.
    `timeout` and the `cancelled` status. Spruce treats malformed output or a crash as a failed
    lookup, keeps a structured error whatever the exit status, and accepts positive integer game
    IDs only (no booleans, no upper bound).
-5. **Availability.** Spruce offers the action when Cheevos's `config.json` has
-   `"gameProgress": 2` or more (1: `--game-id` launches; 2: also ships `identify-rom.sh`) and
-   both scripts exist. A missing or broken proxy shows the `dependency` message instead.
+5. **Availability.** Spruce offers the action when Cheevos's `config.json` has a
+   `"pyuiEntry"` and `"gameProgress": 2` or more (1: the entry opens one game with
+   `game_id=N`; 2: also ships `identify-rom.sh`), and the helper exists. A missing or broken
+   proxy shows the `dependency` message instead.
 
 **Inside the helper** (in this order; each step loads its code only when reached):
 - **Saved paths:** `Saves/cheevos/cache/rom-identifications.json` (256 entries, at most

@@ -314,5 +314,5 @@ so the bridge shows "[START] Done [B] Delete [L1] Shift [R1] Caps" in the bottom
 | Proxy missing or unreadable | Hide the Settings status row and pending markers. |
 | Event details unavailable (never fetched offline, or RA's v2 API refused) | Event badges keep RA's own title and image, described as "Event award"; the sync carries on (not "API key rejected"), and the next sync asks again. Fetched details are kept for offline browsing. |
 | Theme lacks an asset we use | Fall back to our bundled icons (`cheevos/res/`) or generate it (button badges). |
-| The app can't start (PyUI import, bootstrap, any crash) | `launch.sh` sees the non-zero exit, appends stderr to the app log (errors before logging starts only reach stderr), and shows "Cheevos couldn't start" with the log's path through `App/PyUI/launch.sh -msgDisplay` (PyUI's launcher sets up every platform's display). Verified on the Mini. |
-| Unknown platform | `launch.sh` shows "Cheevos doesn't support this device yet" the same way. |
+| An error | `cheevos.native.run` logs it to the app log, takes every hook out of PyUI, shows "Cheevos stopped after an error. Details: Saves/spruce/cheevos-<platform>.log" for 5 s, and returns to Spruce's menu. An error before Cheevos's own code runs (a broken or incomplete package) is logged by PyUI (`Saves/spruce/pyui.log`), which shows "The app stopped after an error." Checked on the desktop, not yet on a device. |
+| Unknown platform | None: Cheevos runs wherever PyUI does, with no platform set-up of its own. |

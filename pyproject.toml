@@ -64,9 +64,13 @@ max-returns = 6
 "tests/**" = ["D", "S101", "S603", "ANN", "PLR2004", "PLR0913", "FBT"]
 # CLI scripts report to the terminal.
 "scripts/**" = ["T20"]
-# PyUI is importable only after bootstrap.add_pyui_to_path(), so these import it lazily.
+# PyUI is importable only inside its process or after the desktop runner puts it on sys.path.
 "src/cheevos/ui/pyui/**" = ["PLC0415"]
 "src/cheevos/platform/desktop/__main__.py" = ["PLC0415"]
+"src/cheevos/platform/desktop/pyui_setup.py" = ["PLC0415"]
+"scripts/device_session.py" = ["PLC0415"]
+# Imports the app inside functions so that it can be unloaded, and reports on stdout.
+"tests/screens/native_session.py" = ["PLC0415", "T201"]
 # These import what the first frame doesn't need on first use: start-up time on a Mini
 # (.agents/device.md, "Start-up"; tests/unit/test_startup_imports.py keeps it so).
 "src/cheevos/app.py" = ["PLC0415"]

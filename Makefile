@@ -79,10 +79,10 @@ package: ## Build the device package: dist/App/Cheevos and dist/Cheevos-<version
 deploy: package ## Copy the package to the device (DEVICE_HOST=<ip> or DEVICE_SSH=...)
 	scripts/device.sh deploy
 
-launch: ## Start Cheevos on the device remotely
-	scripts/device.sh launch
+launch: ## Open Cheevos on the device as PyUI's menus do: make launch [GAME=<RA game ID>]
+	scripts/device.sh launch $(GAME)
 
-stop: ## Ask Cheevos on the device to exit
+stop: ## Close a launched Cheevos on the device
 	scripts/device.sh stop
 
 logs: ## Show the device log

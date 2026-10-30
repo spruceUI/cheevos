@@ -3,7 +3,8 @@
 ## Common problems
 | What you see | What to do |
 |---|---|
-| "Cheevos couldn't start" | Something went wrong before the first screen. The log named in the message has the details; please report it on the project's GitHub page. |
+| "Cheevos stopped after an error" | Something went wrong and Cheevos closed. The log named in the message has the details; please report it on the project's GitHub page. |
+| "The app stopped after an error" | Spruce couldn't open Cheevos at all, often because the `App/Cheevos` folder is incomplete. Copy it again from the release. Spruce's log (`Saves/spruce/pyui.log`) has the details. |
 | "Sign in to RetroAchievements first" | Sign in in **Spruce Settings → RetroAchievements** (or in RetroArch), then start Cheevos again. |
 | "API key rejected" | The Web API key is wrong or was reset on the site. Copy it again from retroachievements.org (**Settings → Keys**), press **Start** and type it. |
 | "apikey.txt doesn't hold a Web API key" | The file needs just the key: 32 letters and digits on the first line, nothing else. Press **A** to type it instead. |
@@ -24,7 +25,6 @@ Cheevos' data on the SD card:
 |---|---|---|
 | `Saves/cheevos/apikey.txt` | Your Web API key | Yes. Cheevos asks for it again. |
 | `Saves/cheevos/settings.json` | Your settings | Yes. Back to defaults. |
-| `Saves/cheevos/pyui-state.json` | Last selected rows | Yes. |
 | `Saves/cheevos/cache/` | Synced data, downloaded images and ROM identifications | Yes. The next start syncs everything again. |
 
 Deleting `Saves/cheevos/cache/` fixes most problems that downloading every game again doesn't.

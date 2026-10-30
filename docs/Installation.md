@@ -17,7 +17,7 @@ it. You can also install or update it manually from the latest Cheevos release.
    page (not the "Source code" archives), or build it yourself with `make package` (see
    `RELEASING.md` in the repository).
 2. Unzip it on your computer, then copy the `Cheevos` folder into `App` on your SD card.
-   You should end up with `App/Cheevos/launch.sh`.
+   You should end up with `App/Cheevos/config.json`.
 3. Put the SD card back, open **Apps** in Spruce's main menu and start **Cheevos**.
 
 The first start asks for your Web API key (see [Setup](Setup.md)), then syncs your account. That

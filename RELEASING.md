@@ -48,8 +48,14 @@ need only the `Cheevos-<version>.zip`.
 ## Mirroring releases to SpruceOS
 
 The `spruceos` job replaces only `App/Cheevos/` in an upstream checkout, removing files that
-are no longer in the device package. It preserves the launcher's executable bit and includes
-Cheevos's MIT license. Source docs, tests and the desktop runner are not part of the package.
+are no longer in the device package. It preserves the identification helper's executable bit
+and includes Cheevos's MIT license. Source docs, tests and the desktop runner are not part of
+the package.
+
+Cheevos has no launch script: PyUI runs it in its own process, which needs PyUI's in-process
+app runner (`App/PyUI/main-ui/apps/native_app.py`, SpruceOS's own PR, not part of this mirror).
+The job checks the target branch for it and fails without opening a PR until it is merged;
+rerun the failed job afterwards.
 The PR links the Cheevos release and copies the published release's Changes section, including
 the linked PRs, commits and full changelog. This covers changes since the previous stable
 release, including intervening pre-releases (or the whole history for the first stable release).
