@@ -5,26 +5,67 @@ PyUI is SpruceOS's Python/SDL2 UI toolkit. Cheevos imports it at runtime from
 weekly). Only `cheevos.ui.pyui` (the bridge) and `cheevos.platform.desktop` (the desktop runner)
 may import it ([code.md](code.md), "Layers"). Read this file before touching either.
 
-PyUI can be started from a separate app (`app/launch.sh` mirrors the platform branch of
-PyUI's own launcher; measured start-up times are in [device.md](device.md)). Its views draw
-what the app needs: lists with icons and right-aligned values, badge grids, popups and custom
-screens. Progress bars, frames and the bottom-bar status are drawn by the bridge on top of
-PyUI's views, without patching PyUI.
+Cheevos runs only inside PyUI's own process, as the Activity Tracker does ("In-process
+sessions", below); it has no launcher of its own. The desktop runner brings PyUI up itself
+first ("The desktop runner's start-up"), then runs the same session. PyUI's views draw what the
+app needs: lists with icons and right-aligned values, badge grids, popups and custom screens.
+Progress bars, frames and the bottom-bar status are drawn by the bridge on top of PyUI's
+views, without patching PyUI.
+
+## In-process sessions
+- **How PyUI opens it:** `config.json` has `"pyuiEntry": "cheevos.native:run"`. PyUI's
+  `apps/native_app.py` (SpruceOS) appends `App/Cheevos` to `sys.path` (PyUI stays at
+  `sys.path[0]`), imports the module and calls `run()` from the Apps menu, or `run(game_id=N)`
+  from the game menu's "View achievement progress", in PyUI's menu loop: PyUI doesn't exit, and
+  B returns straight to its menu. It clears its texture caches before and after, and when
+  `run` returns it drops every module imported from the app's folder, the loggers of those
+  packages and their importer and `linecache` entries, then runs `gc.collect()` and glibc's
+  `malloc_trim`. An exception escaping the entry point is logged to PyUI's log and shown as
+  "The app stopped after an error"; PyUI carries on.
+- **What `cheevos.native` does:** `run` adds the app log (a handler on the `cheevos` logger,
+  which stops propagating, so neither log gets the other's records), then runs `session`, which
+  the desktop runner also runs. `run` catches any error, logs it and shows "Cheevos stopped after
+  an error" with the log's path. PyUI is already up and owns its device, configs, theme, display,
+  controller, view state (`PyUiState`), logger and signal handlers; Cheevos sets none of them
+  up. Spruce's environment (`PLATFORM`, `SSL_CERT_FILE`) is PyUI's. PyUI's configs and Spruce's
+  are read, never written, except the API key copy below.
+- **Leave PyUI as we found it.** `session` undoes everything it puts into PyUI, in reverse and
+  even after an error (an `ExitStack`): the texture budget (`host.enter`/`leave`); the bottom-
+  and top-bar hooks (`status_bar.installed`, `title_bar.installed`, inside `app.run`); the
+  workers (`app.run` closes them, then `_await_workers` waits up to 2 s more for any
+  `cheevos-*` thread); and last the log redaction's record factory (`uninstall_redaction`: it
+  is process-wide, and inside PyUI it would otherwise run our code for every PyUI record). It
+  also copies the API key into Spruce's settings through PyUI ([integration.md](integration.md)).
+  **Rule:** anything process-wide (a PyUI attribute, a logging hook, a signal handler, `atexit`,
+  a thread) is undone by the session. `tests/screens/test_native_sessions.py` opens and closes
+  the app twice in one PyUI process (once for a single game), drops its modules as PyUI does,
+  and fails if any Cheevos module, object, thread or hook survives; a new kind of hook needs a
+  check in `native_session.py`.
+- **Memory** (Miyoo Mini+, 20-game account, 2026-10-30, same boot): while Cheevos is open the
+  system's anonymous memory is the same as with the separate process it used to be (Home
+  51.8 MB against 52.5 MB, Awards 52.8 against 53.0; MemAvailable within 0.5 MB): PyUI's own
+  ~15 MB of dirty memory stays, but Cheevos no longer loads a second copy of Python and PyUI.
+  After closing, every Cheevos module, object, thread, file and texture is gone (Python's live
+  objects end within ~350 of where they started), but PyUI keeps ~6-7 MB more dirty memory than
+  before the first session: CPython never returns an arena while any block in it is alive, and glibc
+  doesn't trim its thread heaps. It's reused: over six sessions PyUI stayed flat at 22.2 MB
+  (±16 KB) from the second one on, so it doesn't grow per session. PyUI exits before every game,
+  which returns it all. Preloading the C extensions, one glibc arena, fixed trim thresholds and
+  a 256 KB SQLite page cache made no difference. Inside PyUI the sync imports `ssl`,
+  `http.client`, `email` and `sqlite3` (PyUI on devices loads none of them), and they stay
+  loaded: only the app's own folder is dropped.
+- **Speed** (same device): A to Cheevos running 0.5 s warm, its Home 0.05 s later; B to
+  PyUI's menu with everything unloaded 0.1 s. The first open after an update compiles the
+  package (3 s). As a separate process it took 1.8 s to its UI, plus PyUI's exit before and
+  its restart after.
+- **On a device without the menus:** `make launch [GAME=<id>]` saves the running PyUI's
+  environment and command line, asks it to exit, and `principal.sh` runs
+  `scripts/device_session.py` with PyUI's interpreter: it brings PyUI up as `mainui.py` does
+  and opens Cheevos through PyUI's own `native_app.run`, then exits, and PyUI restarts. Dev
+  only, never packaged; it has no per-platform set-up to maintain. Its memory figures leave
+  out PyUI's menus.
 
 ## The bridge
-- **Bootstrap**: mirror `mainui.py` start-up:
-  1. `PyUiConfig.init`, `UserConfig.reload_config`, `CfwSystemConfig.init`, `Language.init`;
-  2. `initialize_device(<name>, main_ui_mode=False)` (then the Wi-Fi status is read on a
-     thread, see [device.md](device.md), "Start-up"), `PyUiState.init`;
-  3. `Theme.init`, `Display.init`, `Controller.init`.
-- **Device name**: the same `-device` value PyUI's `launch.sh` would pass, e.g.
-  `MIYOO_MINI_PLUS`. `app/launch.sh` gets it from Spruce (`get_miyoo_mini_variant` on the Mini
-  family) and passes `CHEEVOS_PYUI_DEVICE`. Every device is created through
-  `devices.device_factory.initialize_device(..., main_ui_mode=False)` (the mode Spruce's
-  `-msgDisplay` helpers use). The factory was extracted from `mainui` in
-  [SpruceOS #1857](https://github.com/spruceUI/spruceOS/pull/1857), so creating a device no
-  longer loads the launcher or its game menus. The bridge keeps no copy of PyUI's device
-  table.
 - **Standard views** (`ViewCreator.create_view`): lists (`ICON_AND_DESC`) and popups
   (`POPUP`), through `views.choose()`, or a `views.PreparedView` that a screen keeps to show
   again ("Showing a view again", below). The same `PreparedView` builds our two subclasses of
@@ -48,22 +89,16 @@ PyUI's views, without patching PyUI.
   `.spruceos/`. The weekly `pyui-drift` workflow tests the latest `Development`. Bump the commit
   after re-verifying against a newer SpruceOS.
 
-## Start-up gotchas
+## The desktop runner's start-up
+`platform/desktop/pyui_setup.py` mirrors `mainui.py`'s start-up for PyUI's `DESKTOP` device
+(`initialize_device("DESKTOP", main_ui_mode=False)`): configs, device, time zone, view state,
+theme, display, controller.
 - **Import path:** PyUI must sit at `sys.path[0]`; `Language` finds `lang/` relative to it
-  (`bootstrap.add_pyui_to_path`).
+  (`add_pyui_to_path`).
 - **Logging:** never call `PyUiLogger.init`. It replaces stdout/stderr. Inject our logger into
-  `PyUiLogger._logger` instead (`bootstrap.install_logger`). Skip
-  `Theme.convert_theme_if_needed` (PyUI already did it at its own start-up).
-- **Configs:** PyUI's and Spruce's configs are read, never written. PyUI's view state goes to
-  our own `Saves/cheevos/pyui-state.json`. `UserConfig.FILEPATH` is hard-coded to the SD card,
-  so the desktop bootstrap overrides it.
-- **Timezone:** call `device.restore_saved_timezone()` after creating the device, or every
-  clock shows UTC. PyUI's launcher does this; we must too.
-- **Screensaver:** in non-launcher mode (`main_ui_mode=False`) the Mini lacks
-  `miyoo_mini_flip_shared_memory_writer`, so the screensaver can't dim the backlight. The
-  bridge creates it (`bootstrap._enable_backlight_control`).
-- **Fullscreen window:** PyUI opens a fullscreen window at the monitor's size, through
-  `device.create_window()`; its `DESKTOP` device opens a normal window instead.
+  `PyUiLogger._logger` instead (`install_logger`).
+- **Configs:** `UserConfig.FILEPATH` is hard-coded to the SD card, so the runner points it at
+  the fake card; PyUI's view state goes to `Saves/cheevos/pyui-state.json` there.
 
 ## View gotchas
 - **Timeouts:** `view.get_selection()` never returns `None`. On a timeout or cursor move it
@@ -207,8 +242,9 @@ PyUI's views, without patching PyUI.
   path forever. When an allocation fails, it flushes both and retries ("Clearing cache : Out of
   memory" in the log). On the Mini that happened every half minute of browsing long lists, and
   a big screenshot texture could fail to load. `texture_budget.py` swaps each cache's dict for
-  an LRU of 2.5 screens' worth of pixels (3 MB each at 640×480), installed after
-  `Display.init`. Text that changes every frame (sync progress) is still drawn with
+  an LRU of 2.5 screens' worth of pixels (3 MB each at 640×480) for the session
+  (`host.enter`), and `uninstall` destroys them and gives PyUI plain dicts back when it ends.
+  Text that changes every frame (sync progress) is still drawn with
   `alpha=255`, which skips the cache entirely.
 - **PyUI logs text it can't draw:** `Display.render_text` logs the string on SDL errors ("SDL
   Error received on loading <text>"), which do happen when memory runs low. Don't put secrets

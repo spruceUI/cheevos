@@ -107,7 +107,7 @@ def render_notes(
     version = tag.removeprefix("v")
     lines = [
         f"Install: unzip `Cheevos-{version}.zip`, then copy its `Cheevos` folder into "
-        "`App` on the SD card, so that `App/Cheevos/launch.sh` exists.",
+        "`App` on the SD card, so that `App/Cheevos/config.json` exists.",
         "",
         "## Changes",
         "",

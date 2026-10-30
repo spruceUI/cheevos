@@ -1,7 +1,7 @@
 """Assemble the device package: ``dist/App/Cheevos/`` and ``dist/Cheevos-<version>.zip``.
 
-Contents: ``config.json``, ``launch.sh``, ``identify-rom.sh``, ``cheevos.png``, ``LICENSE`` and
-the package without the dev-only desktop runner and caches. The zip holds ``Cheevos/`` for
+Contents: ``config.json``, ``identify-rom.sh``, ``cheevos.png``, ``LICENSE`` and the package
+without the dev-only desktop runner and caches. The zip holds ``Cheevos/`` for
 copying into the SD card's ``App/`` folder; the release job in ``.github/workflows/ci.yml``
 publishes it.
 """
@@ -20,8 +20,8 @@ APP_FILES = REPO / "app"
 DIST = REPO / "dist"
 OUTPUT = DIST / "App" / "Cheevos"
 EXCLUDED = shutil.ignore_patterns("__pycache__", "*.pyc", "desktop")
-# Spruce runs these directly: the Apps menu the launcher, its game menu the identification helper.
-EXECUTABLES = ("launch.sh", "identify-rom.sh")
+# Spruce's game menu runs the identification helper; PyUI imports the app itself.
+EXECUTABLES = ("identify-rom.sh",)
 
 
 def build(output: Path = OUTPUT) -> Path:

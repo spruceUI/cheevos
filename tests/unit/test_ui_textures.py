@@ -115,3 +115,17 @@ def test_a_source_that_already_fills_the_box_is_used_as_is(tmp_path):
     pytest.importorskip("sdl2.sdlimage")
     source = tiny_png(tmp_path / "big.png", 1)
     assert primitives.sharp_scaled(source, 8, 8, tmp_path / "scratch") == source
+
+
+def test_uninstall_destroys_the_textures_and_gives_back_plain_caches():
+    pytest.importorskip("sdl2")
+    display = fake_display()
+    texture_budget.install(display, 640, 480)
+    destroyed = []
+    display._text_texture_cache.cache._destroy = destroyed.append
+    texture_budget.uninstall(display)
+    assert destroyed == ["T"]
+    assert display._text_texture_cache.cache == {}
+    assert type(display._image_texture_cache.cache) is dict
+    texture_budget.uninstall(display)  # twice is harmless
+    assert destroyed == ["T"]

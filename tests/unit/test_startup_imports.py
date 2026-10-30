@@ -31,8 +31,9 @@ LATER = [
 ]
 
 
-def test_the_app_starts_without_what_home_does_not_need():
-    probe = "import sys, cheevos.app; print('\\n'.join(sorted(sys.modules)))"
+def test_the_app_opens_without_what_home_does_not_need():
+    # What PyUI imports to open the app (config.json's "pyuiEntry").
+    probe = "import sys, cheevos.native; print('\\n'.join(sorted(sys.modules)))"
     loaded = subprocess.run(
         [sys.executable, "-c", probe],
         capture_output=True,
